@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StoryForge — PM User Story Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --border-bright: #3d3d55;
+    --accent: #7c6af7;
+    --accent2: #e85d9b;
+    --accent-glow: rgba(124, 106, 247, 0.15);
+    --text: #e8e8f0;
+    --text-muted: #7878a0;
+    --text-dim: #4a4a6a;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,106,247,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(232,93,155,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 0;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(124,106,247,0.3);
+    border-radius: 100px;
+    padding: 4px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  h1 .accent { color: var(--accent); }
+  h1 .accent2 { color: var(--accent2); }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto 48px;
+    line-height: 1.6;
+  }
+
+  /* API Key Section */
+  .api-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .api-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  .api-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .api-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .api-input:focus { border-color: var(--accent); }
+  .api-input::placeholder { color: var(--text-dim); }
+
+  .api-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(74,222,128,0.1);
+    color: var(--success);
+    border: 1px solid rgba(74,222,128,0.2);
+    display: none;
+  }
+
+  .api-status.visible { display: block; }
+
+  /* Main card */
+  .main-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .lang-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .lang-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .lang-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 220px;
+    background: transparent;
+    border: none;
+    padding: 24px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    line-height: 1.7;
+  }
+
+  textarea::placeholder { color: var(--text-dim); }
+
+  .card-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .char-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Generate button */
+  .btn-generate {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--accent) 0%, #9b59f5 50%, var(--accent2) 100%);
+    background-size: 200% 200%;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 0.01em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(124,106,247,0.4);
+    background-position: right center;
+  }
+
+  .btn-generate:active { transform: translateY(0); }
+
+  .btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-icon {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s;
+  }
+
+  .btn-generate:hover .btn-icon { transform: rotate(15deg) scale(1.1); }
+
+  /* Loading state */
+  .loading-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 0 0 20px 20px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .loading-bar.active { display: block; }
+
+  .loading-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    animation: loading 2.5s ease-in-out infinite;
+  }
+
+  @keyframes loading {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 70%; margin-left: 0; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* Output */
+  .output-section {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .output-section.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .output-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .output-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .output-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--success);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .output-title::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+  }
+
+  .btn-copy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .btn-copy:hover {
+    border-color: var(--border-bright);
+    color: var(--text);
+  }
+
+  .btn-copy.copied {
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  /* Markdown output styling */
+  .output-content {
+    padding: 28px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .output-content h1,
+  .output-content h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    margin: 28px 0 12px;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .output-content h1 { font-size: 22px; color: var(--accent); }
+  .output-content h2 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .output-content h3 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; color: var(--text-muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .output-content p { margin-bottom: 12px; font-weight: 300; }
+
+  .output-content strong { color: var(--text); font-weight: 600; }
+
+  .output-content code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--accent);
+  }
+
+  .output-content pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+
+  .output-content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* Table */
+  .output-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .output-content th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-content td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+    font-weight: 300;
+  }
+
+  .output-content tr:last-child td { border-bottom: none; }
+  .output-content tr:hover td { background: rgba(124,106,247,0.04); }
+
+  .output-content ul, .output-content ol {
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+
+  .output-content li { margin-bottom: 4px; font-weight: 300; }
+
+  .output-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Error */
+  .error-card {
+    background: rgba(232,93,155,0.08);
+    border: 1px solid rgba(232,93,155,0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent2);
+    display: none;
+    margin-bottom: 20px;
+  }
+
+  .error-card.visible { display: block; }
+
+  /* Footer */
+  footer {
+    padding: 40px 0 48px;
+    text-align: center;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .footer-text a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .api-section { flex-direction: column; align-items: stretch; }
+    .card-footer { flex-direction: column; gap: 12px; }
+    .btn-generate { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="badge">Beta · Free Trial</div>
+    <h1>Story<span class="accent">Forge</span></h1>
+    <p class="subtitle">Paste your requirement, BRD, or feature notes — get structured user stories with acceptance criteria and field specs, ready for Jira.</p>
+  </header>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <span class="api-label">API Key</span>
+    <div class="api-input-wrap">
+      <input
+        type="password"
+        class="api-input"
+        id="apiKey"
+        placeholder="sk-ant-api03-..."
+        oninput="handleApiInput()"
+      />
+    </div>
+    <span class="api-status" id="apiStatus">✓ Key saved</span>
+  </div>
+
+  <!-- Input -->
+  <div class="main-card">
+    <div class="card-header">
+      <span class="card-title">Requirement Input</span>
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btnID" onclick="setLang('id')">ID</button>
+        <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+      </div>
+    </div>
+    <textarea
+      id="requirementInput"
+      placeholder="Paste your requirement, BRD section, or feature notes here...
+
+Example:
+- User can login using email and password
+- Failed login shows error message
+- After 5 failed attempts, account is locked for 30 minutes"
+      oninput="updateCharCount()"
+    ></textarea>
+    <div class="card-footer">
+      <span class="char-count" id="charCount">0 characters</span>
+      <button class="btn-generate" id="generateBtn" onclick="generate()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        Generate User Stories
+      </button>
+    </div>
+    <div class="loading-bar" id="loadingBar">
+      <div class="loading-bar-fill"></div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-card" id="errorCard"></div>
+
+  <!-- Output -->
+  <div class="output-section" id="outputSection">
+    <div class="output-card">
+      <div class="output-header">
+        <span class="output-title">Output Generated</span>
+        <button class="btn-copy" id="copyBtn" onclick="copyOutput()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copy All
+        </button>
+      </div>
+      <div class="output-content" id="outputContent"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p class="footer-text">StoryForge · Built for Product Managers · <a href="#">Feedback</a></p>
+  </footer>
+
+</div>
+
+<script>
+  let selectedLang = 'id';
+  let rawOutput = '';
+
+  const SYSTEM_PROMPT = `You are a senior Product Owner assistant that converts product requirements, BRDs, or feature descriptions into structured user stories with acceptance criteria.
+
+You support bilingual output: if the user writes in Bahasa Indonesia, output in Bahasa Indonesia. If in English, output in English. If mixed, default to Bahasa Indonesia. You will also be given a language preference hint.
+
+## Your Job
+When a user pastes any requirement, BRD section, feature description, or rough notes — convert it into:
+1. Structured User Stories
+2. Acceptance Criteria (Jira-ready Gherkin format)
+3. Field Context Table (for developers and QA)
+4. Open Items list (anything too vague to write a complete story)
+
+## Step 1 — Identify Users & Roles
+List all user roles involved. If unclear, make a reasonable assumption and flag it.
+
+## Step 2 — Write User Stories
+Bahasa Indonesia format:
+As a [peran pengguna],
+I want to be able to [aksi yang ingin dilakukan],
+so that [manfaat atau tujuan bisnis].
+
+English format:
+As a [user role],
+I want to be able to [action],
+so that [business benefit].
+
+Rules:
+- One story per distinct user action
+- Each story independently deliverable
+- Separate stories per role if multiple roles
+- Number each story: US-01, US-02, etc.
+- Flag dependencies
+
+## Step 3 — Acceptance Criteria Table (Jira Version)
+For each story, minimum 3 scenarios: 1 happy path, 1 negative/validation, 1 edge case.
+Keep English Gherkin keywords: Scenario, Given, When, Then, And.
+
+| # | Scenario | Gherkin | Notes |
+|---|---|---|---|
+
+## Step 4 — Field Context Table
+For stories with form inputs or API fields:
+
+| Field Name | Data Type | Validation | Example Value | Description |
+|---|---|---|---|---|
+
+Rules:
+- Include ALL visible fields
+- For enums, list all allowed values
+- Unknown specs: ⚠️ SPEC INCOMPLETE — needs confirmation
+
+## Step 5 — Open Items
+⚠️ NEEDS CLARIFICATION: [what's missing]
+
+## Output Structure
+1. User Roles
+2. User Stories (US-01, US-02...)
+3. AC Table per story
+4. Field Context Table (if applicable)
+5. Open Items
+
+## Tone
+- Direct and structured — PMs are busy
+- Flag assumptions clearly
+- Never invent business rules
+- Keep output scannable with tables and headers`;
+
+  function setLang(lang) {
+    selectedLang = lang;
+    document.getElementById('btnID').classList.toggle('active', lang === 'id');
+    document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+  }
+
+  function handleApiInput() {
+    const key = document.getElementById('apiKey').value;
+    const status = document.getElementById('apiStatus');
+    if (key.startsWith('sk-ant-')) {
+      status.classList.add('visible');
+    } else {
+      status.classList.remove('visible');
+    }
+  }
+
+  function updateCharCount() {
+    const len = document.getElementById('requirementInput').value.length;
+    document.getElementById('charCount').textContent = `${len.toLocaleString()} characters`;
+  }
+
+  async function generate() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const requirement = document.getElementById('requirementInput').value.trim();
+    const btn = document.getElementById('generateBtn');
+    const loadingBar = document.getElementById('loadingBar');
+    const errorCard = document.getElementById('errorCard');
+    const outputSection = document.getElementById('outputSection');
+
+    // Validation
+    if (!apiKey) {
+      showError('Please enter your Anthropic API key above.');
+      return;
+    }
+    if (!requirement) {
+      showError('Please paste your requirement or BRD first.');
+      return;
+    }
+
+    // Reset
+    errorCard.classList.remove('visible');
+    outputSection.classList.remove('visible');
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Generating...`;
+    loadingBar.classList.add('active');
+
+    const langHint = selectedLang === 'id'
+      ? 'Please output in Bahasa Indonesia.'
+      : 'Please output in English.';
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `${langHint}\n\nRequirement:\n${requirement}`
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || `API error ${response.status}`);
+      }
+
+      const data = await response.json();
+      rawOutput = data.content?.[0]?.text || '';
+
+      document.getElementById('outputContent').innerHTML = marked.parse(rawOutput);
+      outputSection.classList.add('visible');
+      outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      showError(`Error: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate User Stories`;
+      loadingBar.classList.remove('active');
+    }
+  }
+
+  function showError(msg) {
+    const card = document.getElementById('errorCard');
+    card.textContent = msg;
+    card.classList.add('visible');
+  }
+
+  async function copyOutput() {
+    if (!rawOutput) return;
+    try {
+      await navigator.clipboard.writeText(rawOutput);
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy All`;
+      }, 2000);
+    } catch (e) {
+      showError('Could not copy. Please select and copy manually.');
+    }
+  }
+
+  // Enter key shortcut
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') generate();
+  });
+</script>
+</body>
+</html>
