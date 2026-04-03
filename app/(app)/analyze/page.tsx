@@ -23,16 +23,30 @@ export default function AnalyzePage() {
         body: JSON.stringify({ text }),
       })
 
-      if (!res.ok) {
-        // API stub returns 501 — show placeholder result for now
+      if (!res.ok || !res.body) {
         setResult(undefined)
         return
       }
 
-      const data = await res.json()
-      setResult(data)
+      // Accumulate the streamed text response, then parse as JSON
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+      }
+
+      const parsed = JSON.parse(accumulated)
+      setResult({
+        ...parsed,
+        sessionId: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      })
     } catch {
-      // silently ignore during scaffold phase
+      setResult(undefined)
     } finally {
       setIsLoading(false)
     }

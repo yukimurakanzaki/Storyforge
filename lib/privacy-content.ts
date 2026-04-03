@@ -27,10 +27,13 @@ Data digunakan untuk:
 
 Data disimpan di server yang berlokasi di region Asia Tenggara menggunakan Supabase (PostgreSQL). Konten BRD yang kamu analisis **tidak disimpan** setelah analisis selesai.
 
+Konten BRD kamu diproses oleh AI provider pihak ketiga. Saat ini kami dalam fase beta testing — kebijakan retensi data AI provider sedang dalam proses konfigurasi. Jangan paste informasi sensitif atau rahasia perusahaan.
+
 ## 5. Berbagi Data
 
 Kami tidak menjual atau membagikan data pribadi kamu kepada pihak ketiga untuk tujuan komersial. Data dapat dibagikan kepada:
-- Penyedia infrastruktur (Supabase, Vercel, Anthropic) sesuai perjanjian pemrosesan data mereka
+- Penyedia infrastruktur (Supabase, Vercel) sesuai perjanjian pemrosesan data mereka
+- AI provider pihak ketiga untuk keperluan pemrosesan analisis BRD
 - Otoritas berwenang jika diwajibkan oleh hukum
 
 ## 6. Hak Pengguna
