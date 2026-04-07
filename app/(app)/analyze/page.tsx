@@ -1,0 +1,112 @@
+'use client'
+
+import { useState } from 'react'
+import { BRDInput } from '@/components/analyze/BRDInput'
+import { OutputPanel } from '@/components/analyze/OutputPanel'
+import { SAMPLE_BRD } from '@/lib/constants'
+import { AnalysisResult } from '@/types'
+import Link from 'next/link'
+
+export default function AnalyzePage() {
+  const [brdText, setBrdText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  async function handleAnalyze(text: string) {
+    setIsLoading(true)
+    setResult(undefined)
+    setError(undefined)
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+
+      if (!res.ok || !res.body) {
+        setError(`Server error ${res.status}`)
+        return
+      }
+
+      // Accumulate the streamed text response, then parse as JSON
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+      }
+
+      // Strip markdown code fences if model wraps output
+      const cleaned = accumulated.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+
+      const parsed = JSON.parse(cleaned)
+      setResult({
+        ...parsed,
+        sessionId: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Terjadi kesalahan. Coba lagi.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top nav */}
+      <header className="border-b border-gray-200 bg-white px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <Link href="/" className="text-lg font-bold text-indigo-600">
+            StoryForge<span className="text-gray-800">.id</span>
+          </Link>
+          <nav className="flex items-center gap-4 text-sm text-gray-500">
+            <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/login" className="hover:text-gray-800 transition-colors">
+              Login
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Input Panel */}
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <BRDInput
+              value={brdText}
+              onChange={setBrdText}
+              onAnalyze={handleAnalyze}
+              onSample={() => setBrdText(SAMPLE_BRD)}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {/* Output Panel */}
+          <OutputPanel result={result} isLoading={isLoading} />
+        </div>
+      </main>
+    </div>
+  )
+}
