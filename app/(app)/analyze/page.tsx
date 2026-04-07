@@ -11,10 +11,12 @@ export default function AnalyzePage() {
   const [brdText, setBrdText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
+  const [error, setError] = useState<string | undefined>(undefined)
 
   async function handleAnalyze(text: string) {
     setIsLoading(true)
     setResult(undefined)
+    setError(undefined)
 
     try {
       const res = await fetch('/api/analyze', {
@@ -24,7 +26,7 @@ export default function AnalyzePage() {
       })
 
       if (!res.ok || !res.body) {
-        setResult(undefined)
+        setError(`Server error ${res.status}`)
         return
       }
 
@@ -39,14 +41,17 @@ export default function AnalyzePage() {
         accumulated += decoder.decode(value, { stream: true })
       }
 
-      const parsed = JSON.parse(accumulated)
+      // Strip markdown code fences if model wraps output
+      const cleaned = accumulated.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+
+      const parsed = JSON.parse(cleaned)
       setResult({
         ...parsed,
         sessionId: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       })
-    } catch {
-      setResult(undefined)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Terjadi kesalahan. Coba lagi.')
     } finally {
       setIsLoading(false)
     }
@@ -79,6 +84,12 @@ export default function AnalyzePage() {
             Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.
           </p>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Input Panel */}

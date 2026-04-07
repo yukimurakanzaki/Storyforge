@@ -34,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Obsidian vault — keep local
+obsidian-vault/.obsidian/
+obsidian-vault/.DS_Store
+obsidian-vault/.trash/
+obsidian-vault/Untitled.md

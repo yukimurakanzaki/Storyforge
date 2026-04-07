@@ -1,11 +1,11 @@
-import { streamText } from 'ai'
-import { google } from '@ai-sdk/google'
+import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 
-// TODO: Switch to Anthropic + ZDR before beta user onboarding
-// See: PRD v1.5 compliance requirements
-
 export const runtime = 'nodejs'
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+})
 
 const SYSTEM_PROMPT = `Kamu adalah analis BRD (Business Requirements Document) berpengalaman untuk Product Manager di Indonesia.
 
@@ -43,11 +43,39 @@ Fokus pencarian gap pada:
 export async function POST(request: NextRequest) {
   const { text } = await request.json()
 
-  const result = await streamText({
-    model: google('gemini-1.5-flash'),
-    system: SYSTEM_PROMPT,
-    prompt: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${text}`,
+  const encoder = new TextEncoder()
+  const readable = new ReadableStream({
+    async start(controller) {
+      try {
+        const stream = await client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 4096,
+          temperature: 0,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${text}`,
+            },
+          ],
+          stream: true,
+        })
+        for await (const chunk of stream) {
+          if (
+            chunk.type === 'content_block_delta' &&
+            chunk.delta.type === 'text_delta'
+          ) {
+            controller.enqueue(encoder.encode(chunk.delta.text))
+          }
+        }
+        controller.close()
+      } catch (err) {
+        controller.error(err)
+      }
+    },
   })
 
-  return result.toTextStreamResponse()
+  return new Response(readable, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
 }
