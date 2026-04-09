@@ -1,4 +1,4 @@
-export const FREE_TIER_LIMIT = 3
+export const FREE_TIER_LIMIT = 5
 export const PRO_TIER_LIMIT = 50
 export const MAX_WORDS_FREE = 5000
 export const MAX_WORDS_PRO = 10000
