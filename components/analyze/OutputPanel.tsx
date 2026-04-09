@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { AnalysisResult, GapItem } from '@/types'
 import { Badge } from '@/components/ui/Badge'
 import { READINESS_LABELS } from '@/lib/constants'
@@ -7,6 +8,7 @@ import { READINESS_LABELS } from '@/lib/constants'
 interface OutputPanelProps {
   result?: AnalysisResult
   isLoading?: boolean
+  isPro?: boolean
 }
 
 function getReadinessColor(score: number): 'green' | 'yellow' | 'red' {
@@ -44,7 +46,25 @@ function LoadingSkeleton() {
   )
 }
 
-export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
+function formatCopyText(questions: string[], isPro: boolean): string {
+  const date = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  let text = `Pertanyaan Klarifikasi dari Analisis BRD — ${date}\n\n`
+  questions.forEach((q, i) => {
+    text += `${i + 1}. ${q}\n`
+  })
+  if (!isPro) {
+    text += `\nDianalisis oleh StoryForge.id`
+  }
+  return text
+}
+
+export function OutputPanel({ result, isLoading = false, isPro = false }: OutputPanelProps) {
+  const [copied, setCopied] = useState(false)
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -65,6 +85,14 @@ export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
 
   const readinessColor = getReadinessColor(result.readinessScore)
   const readinessLabel = getReadinessLabel(result.readinessScore)
+
+  async function handleCopyQuestions() {
+    if (!result) return
+    const text = formatCopyText(result.clarificationQuestions, isPro)
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -109,9 +137,17 @@ export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
       {/* Clarification Questions */}
       {result.clarificationQuestions.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-            Pertanyaan Klarifikasi
-          </h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Pertanyaan Klarifikasi
+            </h3>
+            <button
+              onClick={handleCopyQuestions}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800"
+            >
+              {copied ? 'Tersalin!' : 'Salin Semua'}
+            </button>
+          </div>
           <ol className="flex flex-col gap-2 list-decimal list-inside">
             {result.clarificationQuestions.map((q, idx) => (
               <li key={idx} className="text-sm text-gray-700">
