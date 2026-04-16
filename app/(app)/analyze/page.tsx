@@ -93,6 +93,7 @@ export default function AnalyzePage() {
         createdAt: new Date().toISOString(),
       }
 
+      setBrdText(text)  // ensure state matches what was analyzed
       setResult(analysisResult)
       setMessages([
         {
@@ -169,6 +170,7 @@ export default function AnalyzePage() {
 
   async function handleFinalize() {
     if (!result) return
+    if (isFinalizing || phase === 'finalizing' || phase === 'done') return
     setPhase('finalizing')
     setIsFinalizing(true)
     setError(undefined)
@@ -183,7 +185,6 @@ export default function AnalyzePage() {
           brdText,
           initialAnalysis: result,
           messages,
-          status: 'finalizing',
         }),
       })
       if (!saveRes.ok) {
@@ -215,6 +216,7 @@ export default function AnalyzePage() {
       if (!res.ok || !res.body) {
         setError('Gagal membuat requirements. Coba lagi.')
         setPhase('refining')
+        // isFinalizing is reset in the finally block below
         return
       }
 
