@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
 
   const contextMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS AWAL:\n- Readiness Score: ${initialAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nHASIL DISKUSI KLARIFIKASI:\n${messages.map((m) => `${m.role === 'user' ? 'PM' : 'Analis'}: ${m.content}`).join('\n\n')}\n\nBuat Epic dan User Story lengkap berdasarkan BRD dan diskusi di atas. Sertakan generatedAt dengan timestamp sekarang dalam format ISO 8601.`
 
+  const safeTemplate = outputTemplate?.slice(0, 2000)
+
   const encoder = new TextEncoder()
   const readable = new ReadableStream({
     async start(controller) {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 4096,
           temperature: 0,
-          system: buildSystemPrompt(outputTemplate),
+          system: buildSystemPrompt(safeTemplate),
           messages: [{ role: 'user', content: contextMessage }],
           stream: true,
         })

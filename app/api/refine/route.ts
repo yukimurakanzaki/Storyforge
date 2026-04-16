@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
+  if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
+    return NextResponse.json({ error: 'Last message must be from user' }, { status: 400 })
+  }
+
   // Turn number = number of assistant messages so far
   const turnNumber = messages.filter((m) => m.role === 'assistant').length
 
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
   try {
     const stream = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 2048,
       temperature: 0,
       system: buildSystemPrompt(brdText, initialAnalysis, turnNumber),
       messages: anthropicMessages,
