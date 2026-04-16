@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
         }
         controller.close()
       } catch (err) {
+        console.error('[api/requirements] stream error:', err)
         controller.error(err)
       }
     },

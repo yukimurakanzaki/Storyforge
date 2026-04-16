@@ -6,6 +6,7 @@ import { RequirementsExport } from './RequirementsExport'
 interface RequirementsPanelProps {
   requirements: RequirementsResult | null
   isLoading: boolean
+  onRetry?: () => void
 }
 
 function LoadingSkeleton() {
@@ -27,7 +28,7 @@ function LoadingSkeleton() {
   )
 }
 
-export function RequirementsPanel({ requirements, isLoading }: RequirementsPanelProps) {
+export function RequirementsPanel({ requirements, isLoading, onRetry }: RequirementsPanelProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -53,6 +54,14 @@ export function RequirementsPanel({ requirements, isLoading }: RequirementsPanel
         <p className="text-sm text-red-700">
           Tidak ada requirement yang dihasilkan. Coba ulangi sesi refinement.
         </p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="self-start rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
+          >
+            ← Kembali ke Refinement
+          </button>
+        )}
       </div>
     )
   }

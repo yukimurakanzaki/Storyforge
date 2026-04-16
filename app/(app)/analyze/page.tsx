@@ -333,6 +333,11 @@ export default function AnalyzePage() {
             <RequirementsPanel
               requirements={requirements}
               isLoading={isFinalizing}
+              onRetry={() => {
+                setPhase('refining')
+                setRequirements(null)
+                setIsFinalizing(false)
+              }}
             />
           )}
         </div>
