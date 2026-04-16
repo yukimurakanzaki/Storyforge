@@ -33,6 +33,7 @@ export function RefinementChat({
   const canSend = input.trim().length > 0 && !overLimit && !isLoading && !disabled
 
   useEffect(() => {
+    if (messages.length === 0) return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 

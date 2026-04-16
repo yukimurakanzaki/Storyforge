@@ -32,7 +32,9 @@ export function RequirementsExport({ requirements }: RequirementsExportProps) {
     const a = document.createElement('a')
     a.href = url
     a.download = `requirements-${new Date().toISOString().slice(0, 10)}.md`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
