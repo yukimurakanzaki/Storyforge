@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude skill:*)",
+      "Bash(git add *)",
+      "Bash(git reset *)"
+    ]
+  }
+}
