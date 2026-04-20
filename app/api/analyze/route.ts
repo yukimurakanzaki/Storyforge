@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 
@@ -27,6 +27,11 @@ Format output (ikuti persis):
   "readinessLabel": "<'Siap' jika skor >=80, 'Perlu Klarifikasi' jika skor >=50, 'Tidak Siap' jika skor <50>"
 }
 
+BATAS OUTPUT KETAT:
+- Maksimal 10 gap paling kritis (prioritaskan high severity)
+- Maksimal 5 clarification questions (yang paling penting)
+- Deskripsi gap: 1 kalimat singkat, padat
+
 Panduan penilaian readinessScore:
 - 80-100: BRD lengkap, minim gap, siap dikerjakan engineering
 - 50-79: Ada gap signifikan yang perlu klarifikasi sebelum development
@@ -43,39 +48,38 @@ Fokus pencarian gap pada:
 export async function POST(request: NextRequest) {
   const { text } = await request.json()
 
-  const encoder = new TextEncoder()
-  const readable = new ReadableStream({
-    async start(controller) {
-      try {
-        const stream = await client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 4096,
-          temperature: 0,
-          system: SYSTEM_PROMPT,
-          messages: [
-            {
-              role: 'user',
-              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${text}`,
-            },
-          ],
-          stream: true,
-        })
-        for await (const chunk of stream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            controller.enqueue(encoder.encode(chunk.delta.text))
-          }
-        }
-        controller.close()
-      } catch (err) {
-        controller.error(err)
-      }
-    },
-  })
+  if (!text) {
+    return NextResponse.json({ error: 'Missing text' }, { status: 400 })
+  }
 
-  return new Response(readable, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      temperature: 0,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${text}`,
+        },
+      ],
+    })
+
+    const text_content = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
+
+    const cleaned = text_content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim()
+
+    const parsed = JSON.parse(cleaned)
+    return NextResponse.json(parsed)
+  } catch (err) {
+    console.error('[api/analyze] error:', err)
+    return NextResponse.json({ error: 'Terjadi kesalahan. Coba lagi.' }, { status: 500 })
+  }
 }

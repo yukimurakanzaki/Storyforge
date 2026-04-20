@@ -67,26 +67,14 @@ export default function AnalyzePage() {
         body: JSON.stringify({ text }),
       })
 
-      if (!res.ok || !res.body) {
-        setError(`Server error ${res.status}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error ?? `Server error ${res.status}`)
         setPhase('input')
         return
       }
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let accumulated = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) { accumulated += decoder.decode(); break }
-        accumulated += decoder.decode(value, { stream: true })
-      }
-
-      const cleaned = accumulated
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-        .trim()
-      const parsed = JSON.parse(cleaned)
+      const parsed = await res.json()
       const analysisResult: AnalysisResult = {
         ...parsed,
         sessionId: crypto.randomUUID(),
@@ -132,26 +120,13 @@ export default function AnalyzePage() {
         }),
       })
 
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
         setMessages(messages) // rollback user message
         setError('Gagal mengirim pesan. Coba lagi.')
         return
       }
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let accumulated = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) { accumulated += decoder.decode(); break }
-        accumulated += decoder.decode(value, { stream: true })
-      }
-
-      const cleaned = accumulated
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-        .trim()
-      const parsed: { message: string; readyToFinalize: boolean } = JSON.parse(cleaned)
+      const parsed: { message: string; readyToFinalize: boolean } = await res.json()
 
       setMessages([
         ...nextMessages,
