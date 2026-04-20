@@ -20,6 +20,8 @@ INSTRUKSI:
 - Setiap acceptance criteria harus terukur dan dapat diuji (bukan "sistem harus baik")
 - Gunakan Bahasa Indonesia
 - Kembalikan JSON valid tanpa markdown
+- BATAS OUTPUT KETAT: maksimal 5 Epic, maksimal 4 Story per Epic, maksimal 3 acceptance criteria per Story
+- Gunakan kalimat pendek dan padat — hindari pengulangan informasi dari BRD
 
 Format JSON:
 {

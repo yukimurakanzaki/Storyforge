@@ -78,7 +78,7 @@ export default function AnalyzePage() {
       let accumulated = ''
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) { accumulated += decoder.decode(); break }
         accumulated += decoder.decode(value, { stream: true })
       }
 
@@ -143,7 +143,7 @@ export default function AnalyzePage() {
       let accumulated = ''
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) { accumulated += decoder.decode(); break }
         accumulated += decoder.decode(value, { stream: true })
       }
 
@@ -225,7 +225,7 @@ export default function AnalyzePage() {
       let accumulated = ''
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) { accumulated += decoder.decode(); break }
         accumulated += decoder.decode(value, { stream: true })
       }
 
