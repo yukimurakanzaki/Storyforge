@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       {
         session_id: sessionId,
         brd_text: brdText,
-        initial_analysis: initialAnalysis,
+        analysis: initialAnalysis,
         refinement_messages: messages ?? [],
         status: 'finalizing',
         created_at: new Date().toISOString(),

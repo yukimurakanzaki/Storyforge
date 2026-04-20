@@ -40,6 +40,7 @@ export default function AnalyzePage() {
   const [isRefining, setIsRefining] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
+  const [showAnalysis, setShowAnalysis] = useState(false)
 
   // Warn user before leaving mid-session
   useEffect(() => {
@@ -126,7 +127,35 @@ export default function AnalyzePage() {
         return
       }
 
-      const parsed: { message: string; readyToFinalize: boolean } = await res.json()
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+      }
+
+      const cleaned = accumulated
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim()
+
+      let parsed: { message: string; readyToFinalize: boolean }
+      try {
+        parsed = JSON.parse(cleaned)
+      } catch {
+        // JSON truncated — extract what we can
+        const msgMatch = cleaned.match(/"message"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"readyToFinalize|"\s*\}|$)/)
+        const rtfMatch = cleaned.match(/"readyToFinalize"\s*:\s*(true|false)/)
+        const rawMessage = msgMatch
+          ? msgMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+          : cleaned
+        parsed = {
+          message: rawMessage || 'Maaf, terjadi kesalahan memproses respons.',
+          readyToFinalize: rtfMatch?.[1] === 'true',
+        }
+      }
 
       setMessages([
         ...nextMessages,
@@ -266,13 +295,75 @@ export default function AnalyzePage() {
               />
             ) : (
               <div className="flex flex-col gap-4">
-                {/* BRD summary */}
+                {/* BRD summary + analysis toggle */}
                 <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-2 flex items-center justify-between">
                   <span className="text-xs text-gray-500">BRD yang dianalisis</span>
-                  <span className="text-xs font-medium text-gray-600">
-                    {summarizeBrd(brdText)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-gray-600">
+                      {summarizeBrd(brdText)}
+                    </span>
+                    <button
+                      onClick={() => setShowAnalysis((v) => !v)}
+                      className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      title={showAnalysis ? 'Sembunyikan analisis' : 'Lihat hasil analisis'}
+                    >
+                      <span
+                        className={[
+                          'inline-flex w-8 h-4 rounded-full transition-colors duration-200 relative',
+                          showAnalysis ? 'bg-indigo-600' : 'bg-gray-300',
+                        ].join(' ')}
+                      >
+                        <span
+                          className={[
+                            'inline-block w-3 h-3 bg-white rounded-full shadow absolute top-0.5 transition-transform duration-200',
+                            showAnalysis ? 'translate-x-4' : 'translate-x-0.5',
+                          ].join(' ')}
+                        />
+                      </span>
+                      Analisis
+                    </button>
+                  </div>
                 </div>
+
+                {/* Collapsible inline analysis */}
+                {showAnalysis && result && (
+                  <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 max-h-60 overflow-y-auto text-xs text-gray-700 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-indigo-700">Hasil Analisis Awal</span>
+                      <span className="text-indigo-600 font-medium">
+                        Readiness: {result.readinessScore}/100 · {result.readinessLabel}
+                      </span>
+                    </div>
+                    {result.clarificationQuestions.length > 0 && (
+                      <div>
+                        <p className="font-medium text-gray-600 mb-1">Pertanyaan Klarifikasi:</p>
+                        <ol className="flex flex-col gap-1 list-decimal list-inside">
+                          {result.clarificationQuestions.map((q, i) => (
+                            <li key={i} className="leading-relaxed">{q}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                    {result.gapList.length > 0 && (
+                      <div>
+                        <p className="font-medium text-gray-600 mb-1">Gap yang Ditemukan:</p>
+                        <ul className="flex flex-col gap-1">
+                          {result.gapList.map((g, i) => (
+                            <li key={i} className="flex gap-1.5">
+                              <span className={[
+                                'font-semibold shrink-0',
+                                g.severity === 'high' ? 'text-red-600' : g.severity === 'medium' ? 'text-yellow-600' : 'text-gray-500',
+                              ].join(' ')}>
+                                [{g.severity.toUpperCase()}]
+                              </span>
+                              <span>{g.category}: {g.description}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <RefinementChat
                   messages={messages}

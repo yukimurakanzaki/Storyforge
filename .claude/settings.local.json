@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(claude skill:*)"
+      "Bash(claude skill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm --version)",
+      "Bash(python:*)"
     ]
   }
 }
