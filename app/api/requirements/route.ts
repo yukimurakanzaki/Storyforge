@@ -67,36 +67,29 @@ export async function POST(request: NextRequest) {
 
   const safeTemplate = outputTemplate?.slice(0, 2000)
 
-  const encoder = new TextEncoder()
-  const readable = new ReadableStream({
-    async start(controller) {
-      try {
-        const stream = await client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 8000,
-          temperature: 0,
-          system: buildSystemPrompt(safeTemplate),
-          messages: [{ role: 'user', content: contextMessage }],
-          stream: true,
-        })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 8000,
+      temperature: 0,
+      system: buildSystemPrompt(safeTemplate),
+      messages: [{ role: 'user', content: contextMessage }],
+    })
 
-        for await (const chunk of stream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            controller.enqueue(encoder.encode(chunk.delta.text))
-          }
-        }
-        controller.close()
-      } catch (err) {
-        console.error('[api/requirements] stream error:', err)
-        controller.error(err)
-      }
-    },
-  })
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
 
-  return new Response(readable, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
+    const cleaned = text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim()
+
+    const parsed = JSON.parse(cleaned)
+    return NextResponse.json(parsed)
+  } catch (err) {
+    console.error('[api/requirements] error:', err)
+    return NextResponse.json({ error: 'Gagal membuat requirements. Coba lagi.' }, { status: 500 })
+  }
 }

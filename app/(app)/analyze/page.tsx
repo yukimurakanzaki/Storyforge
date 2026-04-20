@@ -213,27 +213,14 @@ export default function AnalyzePage() {
         }),
       })
 
-      if (!res.ok || !res.body) {
-        setError('Gagal membuat requirements. Coba lagi.')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error ?? 'Gagal membuat requirements. Coba lagi.')
         setPhase('refining')
-        // isFinalizing is reset in the finally block below
         return
       }
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let accumulated = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) { accumulated += decoder.decode(); break }
-        accumulated += decoder.decode(value, { stream: true })
-      }
-
-      const cleaned = accumulated
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-        .trim()
-      const parsed: RequirementsResult = JSON.parse(cleaned)
+      const parsed: RequirementsResult = await res.json()
       setRequirements(parsed)
       setPhase('done')
 
