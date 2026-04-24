@@ -62,33 +62,41 @@ export async function POST(request: NextRequest) {
     }
   )
 
-  // Verify auth
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { data: { user } } = await supabase.auth.getUser()
+  const isGuest = !user
 
-  // Check usage limits
-  const usage = await checkUsage(supabase, user.id)
-  if (!usage.allowed) {
-    return NextResponse.json(
-      {
-        error: 'limit_exceeded',
-        message: `Batas analisis bulan ini sudah tercapai (${usage.count}/${usage.limit}). Upgrade ke Pro untuk analisis tak terbatas.`,
-        count: usage.count,
-        limit: usage.limit,
-      },
-      { status: 429 }
-    )
+  if (user) {
+    // Check usage limits for authenticated users only.
+    const usage = await checkUsage(supabase, user.id)
+    if (!usage.allowed) {
+      return NextResponse.json(
+        {
+          error: 'limit_exceeded',
+          message: `Batas analisis bulan ini sudah tercapai (${usage.count}/${usage.limit}). Upgrade ke Pro untuk analisis tak terbatas.`,
+          count: usage.count,
+          limit: usage.limit,
+          mode: 'user',
+        },
+        { status: 429 }
+      )
+    }
   }
 
   const { text } = await request.json()
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return NextResponse.json(
+      { error: 'invalid_request', message: 'Teks BRD tidak boleh kosong.', mode: isGuest ? 'guest' : 'user' },
+      { status: 400 }
+    )
+  }
   const sessionId = crypto.randomUUID()
   const wordCount = text.trim().split(/\s+/).length
   const startTime = Date.now()
 
-  // Log analysis started
-  await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
+  // Log analysis started (authenticated users only).
+  if (user) {
+    await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
+  }
 
   // Stream the analysis
   const encoder = new TextEncoder()
@@ -129,22 +137,26 @@ export async function POST(request: NextRequest) {
             .trim()
           const parsed = JSON.parse(cleaned)
 
-          await supabase.from('analysis_results').insert({
-            user_id: user.id,
-            brd_text: text,
-            gap_list: parsed.gapList || [],
-            clarification_questions: parsed.clarificationQuestions || [],
-            readiness_score: parsed.readinessScore || 0,
-            readiness_label: parsed.readinessLabel || 'Tidak Siap',
-            session_id: sessionId,
-          })
+          if (user) {
+            await supabase.from('analysis_results').insert({
+              user_id: user.id,
+              brd_text: text,
+              gap_list: parsed.gapList || [],
+              clarification_questions: parsed.clarificationQuestions || [],
+              readiness_score: parsed.readinessScore || 0,
+              readiness_label: parsed.readinessLabel || 'Tidak Siap',
+              session_id: sessionId,
+            })
+          }
         } catch {
           // If parsing fails, still log the event but skip saving result
           console.error('Failed to parse/save analysis result')
         }
 
-        await incrementUsage(supabase, user.id)
-        await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_completed', wordCount, durationMs)
+        if (user) {
+          await incrementUsage(supabase, user.id)
+          await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_completed', wordCount, durationMs)
+        }
 
         controller.close()
       } catch (err) {
@@ -156,6 +168,8 @@ export async function POST(request: NextRequest) {
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Mode': isGuest ? 'guest' : 'user',
       'X-Session-Id': sessionId,
     },
   })

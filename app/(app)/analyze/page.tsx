@@ -7,20 +7,31 @@ import { AuthNav } from '@/components/AuthNav'
 import { SAMPLE_BRD } from '@/lib/constants'
 import { AnalysisResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
+import { readGuestUsage, incrementGuestUsage } from '@/lib/guest-usage'
 import Link from 'next/link'
+import type { User } from '@supabase/supabase-js'
 
 export default function AnalyzePage() {
   const [brdText, setBrdText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
   const [error, setError] = useState<string | undefined>(undefined)
+  const [user, setUser] = useState<User | null>(null)
+  const [authResolved, setAuthResolved] = useState(false)
   const [usage, setUsage] = useState<{ count: number; limit: number; plan: string } | null>(null)
 
   useEffect(() => {
     async function fetchUsage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      setUser(user)
+      setAuthResolved(true)
+
+      if (!user) {
+        const guestUsage = readGuestUsage()
+        setUsage({ ...guestUsage, plan: 'guest' })
+        return
+      }
 
       const { data: sub } = await supabase
         .from('subscriptions')
@@ -45,6 +56,12 @@ export default function AnalyzePage() {
   }, [result])
 
   async function handleAnalyze(text: string) {
+    const isGuest = !user
+    if (isGuest && usage && usage.count >= usage.limit) {
+      setError('Batas analisis guest di perangkat ini sudah tercapai. Masuk untuk melanjutkan.')
+      return
+    }
+
     setIsLoading(true)
     setResult(undefined)
     setError(undefined)
@@ -52,7 +69,10 @@ export default function AnalyzePage() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isGuest ? { 'x-guest-mode': '1' } : {}),
+        },
         body: JSON.stringify({ text }),
       })
 
@@ -86,6 +106,12 @@ export default function AnalyzePage() {
 
       const cleaned = accumulated.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
       const parsed = JSON.parse(cleaned)
+
+      if (isGuest) {
+        const nextGuestUsage = incrementGuestUsage()
+        setUsage({ ...nextGuestUsage, plan: 'guest' })
+      }
+
       setResult({
         ...parsed,
         sessionId,
@@ -107,9 +133,6 @@ export default function AnalyzePage() {
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
-              Riwayat
-            </Link>
             <AuthNav />
           </nav>
         </div>
@@ -129,7 +152,9 @@ export default function AnalyzePage() {
               <span className={`text-sm font-medium ${usage.count >= usage.limit ? 'text-red-600' : 'text-gray-500'}`}>
                 {usage.count}/{usage.limit} analisis
               </span>
-              <p className="text-xs text-gray-400">bulan ini</p>
+              <p className="text-xs text-gray-400">
+                {usage.plan === 'guest' ? 'guest di perangkat ini' : 'bulan ini'}
+              </p>
             </div>
           )}
           {usage?.plan === 'pro' && (
@@ -147,6 +172,20 @@ export default function AnalyzePage() {
                 Lihat paket Pro
               </Link>
             )}
+            {error.includes('guest') && (
+              <Link href="/login?redirect=/analyze" className="ml-2 font-medium text-indigo-600 underline">
+                Masuk
+              </Link>
+            )}
+          </div>
+        )}
+
+        {authResolved && !user && (
+          <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+            Kamu sedang menggunakan mode guest. Riwayat analisis tidak disimpan.
+            <Link href="/login?redirect=/analyze" className="ml-2 font-medium underline">
+              Masuk untuk simpan riwayat
+            </Link>
           </div>
         )}
 

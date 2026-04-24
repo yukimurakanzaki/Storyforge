@@ -9,6 +9,13 @@ export default function LoginPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
+  function sanitizeRedirectPath(input: string | null): string {
+    if (!input) return '/analyze'
+    if (!input.startsWith('/')) return '/analyze'
+    if (input.startsWith('//')) return '/analyze'
+    return input
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setStatus('loading')
@@ -19,10 +26,8 @@ export default function LoginPage() {
 
     // Preserve redirect param if present
     const params = new URLSearchParams(window.location.search)
-    const redirectPath = params.get('redirect')
-    if (redirectPath) {
-      redirectTo.searchParams.set('redirect', redirectPath)
-    }
+    const redirectPath = sanitizeRedirectPath(params.get('redirect'))
+    redirectTo.searchParams.set('redirect', redirectPath)
 
     const { error } = await supabase.auth.signInWithOtp({
       email,

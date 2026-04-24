@@ -1,8 +1,14 @@
 import Link from 'next/link'
+import { AuthNav } from '@/components/AuthNav'
 
 export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+      <header className="absolute left-0 right-0 top-0 px-4 py-4">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-end">
+          <AuthNav />
+        </div>
+      </header>
       <div className="w-full max-w-2xl text-center">
         {/* Beta badge */}
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-4 py-1.5 text-xs font-medium text-indigo-600 shadow-sm">
@@ -71,7 +77,7 @@ export default function LandingPage() {
         {/* CTA */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
-            href="/login?redirect=/analyze"
+            href="/analyze"
             className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
             Mulai Analisis Gratis
