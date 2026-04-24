@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+  const [password, setPassword] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const router = useRouter()
 
   function sanitizeRedirectPath(input: string | null): string {
     if (!input) return '/analyze'
@@ -22,23 +25,16 @@ export default function LoginPage() {
     setErrorMsg('')
 
     const supabase = createClient()
-    const redirectTo = new URL('/api/auth/callback', window.location.origin)
-
-    // Preserve redirect param if present
-    const params = new URLSearchParams(window.location.search)
-    const redirectPath = sanitizeRedirectPath(params.get('redirect'))
-    redirectTo.searchParams.set('redirect', redirectPath)
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo.toString() },
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setStatus('error')
-      setErrorMsg(error.message)
+      setErrorMsg('Email atau password salah.')
     } else {
-      setStatus('sent')
+      const params = new URLSearchParams(window.location.search)
+      const redirectPath = sanitizeRedirectPath(params.get('redirect'))
+      router.push(redirectPath)
+      router.refresh()
     }
   }
 
@@ -50,59 +46,59 @@ export default function LoginPage() {
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Masuk ke StoryForge</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Kami akan kirim magic link ke email kamu
-          </p>
         </div>
 
-        {status === 'sent' ? (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-6 text-center">
-            <p className="text-sm font-medium text-green-800">
-              Link login sudah dikirim!
-            </p>
-            <p className="mt-2 text-sm text-green-600">
-              Cek inbox <strong>{email}</strong> dan klik link untuk masuk.
-            </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="kamu@email.com"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="kamu@email.com"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password kamu"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          {status === 'error' && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMsg}
             </div>
+          )}
 
-            {status === 'error' && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMsg || 'Terjadi kesalahan. Coba lagi.'}
-              </div>
-            )}
+          <button
+            type="submit"
+            disabled={status === 'loading' || !email || !password}
+            className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {status === 'loading' ? 'Masuk...' : 'Login'}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={status === 'loading' || !email}
-              className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {status === 'loading' ? 'Mengirim...' : 'Kirim Magic Link'}
-            </button>
-          </form>
-        )}
-
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Dengan masuk, kamu menyetujui{' '}
-          <Link href="/terms" className="underline hover:text-gray-600">Syarat Layanan</Link>
-          {' '}dan{' '}
-          <Link href="/privacy" className="underline hover:text-gray-600">Kebijakan Privasi</Link>
-          {' '}kami.
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Belum punya akun?{' '}
+          <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-700">
+            Daftar
+          </Link>
         </p>
       </div>
     </div>

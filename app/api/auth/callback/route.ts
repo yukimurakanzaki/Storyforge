@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
+
   const sanitizeRedirectPath = (input: string | null): string => {
     if (!input) return '/analyze'
     if (!input.startsWith('/')) return '/analyze'
@@ -34,6 +36,10 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Signup flow: send to set-password first
+      if (type === 'signup') {
+        return NextResponse.redirect(new URL('/set-password', origin))
+      }
       return NextResponse.redirect(new URL(redirectPath, origin))
     }
   }

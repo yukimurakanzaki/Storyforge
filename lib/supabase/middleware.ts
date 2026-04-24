@@ -30,13 +30,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
-  const isAnalyzeDetailPage = pathname.startsWith('/analyze/')
-  const isProtectedPage = isAnalyzeDetailPage ||
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/settings')
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/signup')
 
-  // Redirect logged-in users away from auth pages
+  const isProtectedPage =
+    pathname === '/analyze' ||
+    pathname.startsWith('/analyze/') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/set-password')
+
+  // Redirect logged-in users away from auth pages (not set-password)
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/analyze'
@@ -47,7 +53,10 @@ export async function updateSession(request: NextRequest) {
   if (!user && isProtectedPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', pathname)
+    // Don't preserve redirect param for set-password (they'll need to re-auth)
+    if (pathname !== '/set-password') {
+      url.searchParams.set('redirect', pathname)
+    }
     return NextResponse.redirect(url)
   }
 
