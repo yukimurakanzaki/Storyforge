@@ -5,7 +5,13 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const redirectPath = searchParams.get('redirect') || '/analyze'
+  const sanitizeRedirectPath = (input: string | null): string => {
+    if (!input) return '/analyze'
+    if (!input.startsWith('/')) return '/analyze'
+    if (input.startsWith('//')) return '/analyze'
+    return input
+  }
+  const redirectPath = sanitizeRedirectPath(searchParams.get('redirect'))
 
   if (code) {
     const cookieStore = await cookies()

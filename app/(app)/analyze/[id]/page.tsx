@@ -5,7 +5,7 @@ import { getAnalysisById } from '@/lib/history'
 import { AuthNav } from '@/components/AuthNav'
 import { OutputPanel } from '@/components/analyze/OutputPanel'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -16,7 +16,9 @@ export default async function AnalysisDetailPage({ params }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return null
+  if (!user) {
+    redirect(`/login?redirect=/analyze/${id}`)
+  }
 
   const analysis = await getAnalysisById(supabase, id, user.id)
   if (!analysis) notFound()
@@ -56,13 +58,10 @@ export default async function AnalysisDetailPage({ params }: Props) {
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
-              Riwayat
-            </Link>
             <Link href="/analyze" className="hover:text-gray-800 transition-colors">
               Analisis Baru
             </Link>
-            <AuthNav />
+            <AuthNav showDashboardLink={false} />
           </nav>
         </div>
       </header>

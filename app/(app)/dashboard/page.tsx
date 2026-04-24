@@ -5,6 +5,7 @@ import { getAnalysisHistory } from '@/lib/history'
 import { AuthNav } from '@/components/AuthNav'
 import { Badge } from '@/components/ui/Badge'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 function getScoreColor(score: number): 'green' | 'yellow' | 'red' {
   if (score >= 80) return 'green'
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return null
+    redirect('/login?redirect=/dashboard')
   }
 
   const history = await getAnalysisHistory(supabase, user.id, 20)
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
             <Link href="/analyze" className="hover:text-gray-800 transition-colors">
               Analisis Baru
             </Link>
-            <AuthNav />
+            <AuthNav showDashboardLink={false} />
           </nav>
         </div>
       </header>

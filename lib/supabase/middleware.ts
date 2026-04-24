@@ -29,11 +29,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/register')
-  const isProtectedPage = request.nextUrl.pathname.startsWith('/analyze') ||
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/settings')
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
+  const isAnalyzeDetailPage = pathname.startsWith('/analyze/')
+  const isProtectedPage = isAnalyzeDetailPage ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/settings')
 
   // Redirect logged-in users away from auth pages
   if (user && isAuthPage) {
@@ -46,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && isProtectedPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
