@@ -215,16 +215,21 @@ Generated after first analysis. Each card shows:
 
 **Submission trigger:** A "Submit Jawaban" button sits at the bottom of the Q&A cards section — separate from the chat "Kirim" button. Submitting Q&A answers and sending a chat message are two distinct actions that both trigger a re-analysis cycle. Users can do either or both in any order.
 
-On each re-analysis cycle (triggered by either "Submit Jawaban" or "Kirim"), the AI:
-- Re-evaluates the full context (BRD paste + all chat messages + all Q&A answers so far)
-- Updates the readiness score and gap list in the right panel
-- Surfaces new questions if gaps remain — appended as new Q&A cards
-- Never re-asks questions already marked answered or out-of-scope
+On each re-analysis cycle (triggered by either "Submit Jawaban" or "Kirim"), the AI produces two outputs simultaneously:
+
+**Right panel (structured):** Readiness score + gap list update silently in place.
+
+**Left panel (conversational):** The AI posts a chat reply explaining:
+- What new gaps were found (if any) and why they matter
+- Which previously open gaps are now closed
+- A concrete suggestion for what to address next
+
+This keeps the left panel as a live conversation, not just a form — the AI is an active participant guiding the PM toward a complete requirement.
 
 ### 8.4 Buttons
 
 - **Submit Jawaban** (Q&A section) — submits all currently filled Q&A card answers, triggers re-analysis
-- **Kirim** (chat input) — sends a chat message, triggers re-analysis
+- **Kirim** (chat input) — sends a chat message, triggers re-analysis; `Enter` key is equivalent to clicking Kirim, `Shift+Enter` inserts a newline
 - **Analisis Ulang** — forces a fresh gap analysis without new input (useful after editing BRD textarea)
 - **Generate User Stories** — always visible in right panel; amber + warning tooltip when score < 80, green when ≥ 80; clicking when < 80 shows confirmation: *"Readiness masih rendah. Generate anyway?"*
 - **Selesai & Arsipkan** — in the session header; archives the session (read-only), moves it to history
