@@ -15,6 +15,7 @@ import {
 import Link from 'next/link'
 import { initTempSession, saveTempSession, incrementRefinementRound, getTempSession } from '@/lib/session/temp-session'
 import type { TempSession } from '@/types'
+import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
 
 function summarizeBrd(text: string): string {
   const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
@@ -45,6 +46,8 @@ export default function AnalyzePage() {
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [tempSession, setTempSession] = useState<TempSession | null>(null)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
+
+  useMigrateTempSession(false)
 
   // Warn user before leaving mid-session
   useEffect(() => {
