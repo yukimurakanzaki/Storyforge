@@ -50,3 +50,14 @@ export interface RequirementsResult {
   epics: Epic[]
   generatedAt: string
 }
+
+export interface TempSession {
+  id: string
+  createdAt: string
+  brdText: string
+  messages: ChatMessage[]
+  result: AnalysisResult | null
+  requirements: RequirementsResult | null
+  refinementRounds: number
+  hasGenerated: boolean
+}
