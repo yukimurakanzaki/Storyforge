@@ -39,6 +39,7 @@ export function initTempSession(): TempSession {
     requirements: null,
     refinementRounds: 0,
     hasGenerated: false,
+    qaAnswers: [],
   }
   saveTempSession(session)
   return session

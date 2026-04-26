@@ -34,6 +34,11 @@ export interface ChatMessage {
   content: string
 }
 
+export interface QAAnswer {
+  answer: string
+  isOutOfScope: boolean
+}
+
 export interface Story {
   title: string
   description: string
@@ -60,4 +65,5 @@ export interface TempSession {
   requirements: RequirementsResult | null
   refinementRounds: number
   hasGenerated: boolean
+  qaAnswers: QAAnswer[]
 }
