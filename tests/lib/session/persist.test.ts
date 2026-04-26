@@ -63,6 +63,7 @@ describe('persistAnalysisState', () => {
 function formatRelativeTime(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime()
   const minutes = Math.floor(diff / 60_000)
+  if (minutes < 1) return 'Baru saja'
   if (minutes < 60) return `${minutes}m lalu`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}j lalu`
@@ -71,6 +72,11 @@ function formatRelativeTime(isoString: string): string {
 }
 
 describe('formatRelativeTime', () => {
+  it('shows "Baru saja" for brand-new sessions', () => {
+    const justNow = new Date(Date.now() - 30_000).toISOString()
+    expect(formatRelativeTime(justNow)).toBe('Baru saja')
+  })
+
   it('shows minutes for recent times', () => {
     const recent = new Date(Date.now() - 5 * 60_000).toISOString()
     expect(formatRelativeTime(recent)).toBe('5m lalu')

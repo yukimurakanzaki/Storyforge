@@ -18,6 +18,7 @@ interface SessionSidebarProps {
 function formatRelativeTime(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime()
   const minutes = Math.floor(diff / 60_000)
+  if (minutes < 1) return 'Baru saja'
   if (minutes < 60) return `${minutes}m lalu`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}j lalu`
@@ -34,17 +35,22 @@ function sessionTitle(session: Session): string {
 export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebarProps) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [fetchError, setFetchError] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) return
+    setIsLoading(true)
+    setFetchError(false)
     const supabase = createClient()
     supabase
       .from('analyze_sessions')
       .select('id, created_at, status, requirement_context')
       .order('created_at', { ascending: false })
       .limit(20)
-      .then(({ data }) => {
-        if (data) setSessions(data as Session[])
+      .then(({ data, error }) => {
+        if (error) { setFetchError(true) } else if (data) { setSessions(data as Session[]) }
+        setIsLoading(false)
       })
   }, [isAuthenticated])
 
@@ -52,11 +58,21 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
 
   return (
     <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-10 bg-black/30 lg:hidden"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Toggle button (mobile) */}
       <button
         onClick={() => setIsOpen((v) => !v)}
         className="fixed bottom-4 right-4 z-20 rounded-full bg-indigo-600 p-3 text-white shadow-lg lg:hidden"
         aria-label="Toggle session history"
+        aria-expanded={isOpen}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -66,10 +82,11 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
       {/* Sidebar panel */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-10 w-64 border-r border-gray-200 bg-white flex flex-col',
-          'transform transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto',
+          'fixed inset-y-0 left-0 z-20 w-64 border-r border-gray-200 bg-white flex flex-col',
+          'transform transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto lg:z-auto',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
+        aria-hidden={!isOpen ? true : undefined}
       >
         <div className="flex-1 overflow-y-auto p-4">
           <button
@@ -83,7 +100,15 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
             Riwayat Sesi
           </h3>
 
-          {sessions.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-10 rounded-md bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : fetchError ? (
+            <p className="text-xs text-red-500">Gagal memuat sesi. Coba muat ulang halaman.</p>
+          ) : sessions.length === 0 ? (
             <p className="text-xs text-gray-400">Belum ada sesi tersimpan.</p>
           ) : (
             <ul className="flex flex-col gap-1">

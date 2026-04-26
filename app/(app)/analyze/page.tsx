@@ -130,6 +130,8 @@ export default function AnalyzePage() {
     setRequirements(null)
     setError(undefined)
     setShowAccountPrompt(false)
+    setShowBrdEdit(false)
+    isFinalizingRef.current = false
   }
 
   async function handleAnalyze(text: string) {
