@@ -4,16 +4,24 @@ import { useEffect, useState } from 'react'
 import { BRDInput } from '@/components/analyze/BRDInput'
 import { OutputPanel } from '@/components/analyze/OutputPanel'
 import { RefinementChat } from '@/components/analyze/RefinementChat'
+import { QACards } from '@/components/analyze/QACards'
 import { RequirementsPanel } from '@/components/analyze/RequirementsPanel'
 import { SAMPLE_BRD } from '@/lib/constants'
-import {
+import type {
   AnalysisResult,
   ChatMessage,
   Phase,
+  QAAnswer,
   RequirementsResult,
 } from '@/types'
 import Link from 'next/link'
-import { initTempSession, saveTempSession, incrementRefinementRound, getTempSession } from '@/lib/session/temp-session'
+import {
+  initTempSession,
+  saveTempSession,
+  incrementRefinementRound,
+  getTempSession,
+  persistAnalysisState,
+} from '@/lib/session/temp-session'
 import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
 import { createClient } from '@/lib/supabase/client'
 
@@ -25,12 +33,27 @@ function summarizeBrd(text: string): string {
 
 function buildFirstAssistantMessage(analysis: AnalysisResult): string {
   if (analysis.clarificationQuestions.length === 0) {
-    return 'Analisis BRD selesai. Readiness score cukup tinggi. Klik "Finalize Requirements" jika kamu sudah siap.'
+    return 'Analisis BRD selesai. Readiness score cukup tinggi. Klik "Generate User Stories" di panel kanan jika kamu sudah siap.'
   }
   const numbered = analysis.clarificationQuestions
     .map((q, i) => `${i + 1}. ${q}`)
     .join('\n')
-  return `Berdasarkan analisis BRD kamu, ada beberapa hal yang perlu klarifikasi:\n\n${numbered}`
+  return `Berdasarkan analisis BRD kamu, ada beberapa hal yang perlu klarifikasi:\n\n${numbered}\n\nJawab melalui kartu Q&A di bawah atau ketik langsung di chat.`
+}
+
+function buildQASubmissionMessage(
+  questions: string[],
+  qaAnswers: QAAnswer[]
+): string {
+  const lines = questions
+    .map((q, i) => {
+      const qa = qaAnswers[i]
+      if (!qa || (!qa.answer.trim() && !qa.isOutOfScope)) return null
+      if (qa.isOutOfScope) return `${i + 1}. ${q}\n   → Di luar scope`
+      return `${i + 1}. ${q}\n   → ${qa.answer.trim()}`
+    })
+    .filter(Boolean)
+  return `Berikut jawaban saya:\n\n${lines.join('\n\n')}`
 }
 
 export default function AnalyzePage() {
@@ -38,7 +61,6 @@ export default function AnalyzePage() {
   const [phase, setPhase] = useState<Phase>('input')
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [readyToFinalize, setReadyToFinalize] = useState(false)
   const [requirements, setRequirements] = useState<RequirementsResult | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
@@ -46,19 +68,10 @@ export default function AnalyzePage() {
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [qaAnswers, setQaAnswers] = useState<QAAnswer[]>([])
+  const [resolvedIndices, setResolvedIndices] = useState<number[]>([])
 
   useMigrateTempSession(isAuthenticated)
-
-  // Warn user before leaving mid-session
-  useEffect(() => {
-    if (phase !== 'refining' && phase !== 'finalizing') return
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [phase])
 
   useEffect(() => {
     const supabase = createClient()
@@ -72,18 +85,40 @@ export default function AnalyzePage() {
   }, [])
 
   useEffect(() => {
+    if (phase !== 'refining' && phase !== 'finalizing') return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [phase])
+
+  useEffect(() => {
     const session = initTempSession()
     if (session.refinementRounds >= 3 || session.hasGenerated) {
       setShowAccountPrompt(true)
     }
   }, [])
 
+  useEffect(() => {
+    if (!result) return
+    setQaAnswers((prev) => {
+      const next = [...prev]
+      while (next.length < result.clarificationQuestions.length) {
+        next.push({ answer: '', isOutOfScope: false })
+      }
+      return next
+    })
+  }, [result?.clarificationQuestions.length])
+
   async function handleAnalyze(text: string) {
     setPhase('analyzing')
     setResult(undefined)
     setError(undefined)
     setMessages([])
-    setReadyToFinalize(false)
+    setQaAnswers([])
+    setResolvedIndices([])
     setRequirements(null)
 
     try {
@@ -107,33 +142,28 @@ export default function AnalyzePage() {
         createdAt: new Date().toISOString(),
       }
 
-      setBrdText(text)  // ensure state matches what was analyzed
-      setResult(analysisResult)
-      setMessages([
-        {
-          role: 'assistant',
-          content: buildFirstAssistantMessage(analysisResult),
-        },
-      ])
-      // If readiness is already high, pre-signal finalize readiness
-      if (analysisResult.readinessScore >= 80) {
-        setReadyToFinalize(true)
+      const firstMsg: ChatMessage = {
+        role: 'assistant',
+        content: buildFirstAssistantMessage(analysisResult),
       }
+
+      setBrdText(text)
+      setResult(analysisResult)
+      setMessages([firstMsg])
       setPhase('refining')
+      persistAnalysisState(text, [firstMsg], analysisResult)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Terjadi kesalahan. Coba lagi.')
       setPhase('input')
     }
   }
 
-  async function handleSendMessage(text: string) {
-    if (!result) return
+  async function callRefineAPI(
+    nextMessages: ChatMessage[],
+    currentResult: AnalysisResult
+  ): Promise<void> {
     setIsRefining(true)
     setError(undefined)
-
-    const userMessage: ChatMessage = { role: 'user', content: text }
-    const nextMessages = [...messages, userMessage]
-    setMessages(nextMessages)
 
     try {
       const res = await fetch('/api/refine', {
@@ -141,71 +171,98 @@ export default function AnalyzePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brdText,
-          initialAnalysis: result,
+          initialAnalysis: currentResult,
           messages: nextMessages,
+          qaAnswers,
         }),
       })
 
       if (!res.ok) {
-        setMessages(messages) // rollback user message
-        setError('Gagal mengirim pesan. Coba lagi.')
+        setMessages(messages)
+        setError('Gagal memproses. Coba lagi.')
         return
       }
 
-      if (!res.body) {
-        setMessages(messages) // rollback user message
-        setError('Respons streaming kosong. Coba lagi.')
-        return
-      }
+      const parsed = await res.json()
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let accumulated = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        accumulated += decoder.decode(value, { stream: true })
-      }
-
-      const cleaned = accumulated
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-        .trim()
-
-      let parsed: { message: string; readyToFinalize: boolean }
-      try {
-        parsed = JSON.parse(cleaned)
-      } catch {
-        // JSON truncated — extract what we can
-        const msgMatch = cleaned.match(/"message"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"readyToFinalize|"\s*\}|$)/)
-        const rtfMatch = cleaned.match(/"readyToFinalize"\s*:\s*(true|false)/)
-        const rawMessage = msgMatch
-          ? msgMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
-          : cleaned
-        parsed = {
-          message: rawMessage || 'Maaf, terjadi kesalahan memproses respons.',
-          readyToFinalize: rtfMatch?.[1] === 'true',
-        }
-      }
-
-      setMessages([
+      const updatedMessages: ChatMessage[] = [
         ...nextMessages,
         { role: 'assistant', content: parsed.message },
-      ])
-      if (parsed.readyToFinalize) {
-        setReadyToFinalize(true)
+      ]
+      setMessages(updatedMessages)
+
+      if (parsed.analysis) {
+        const updatedResult: AnalysisResult = {
+          ...currentResult,
+          ...parsed.analysis,
+        }
+        setResult(updatedResult)
+        persistAnalysisState(brdText, updatedMessages, updatedResult)
+      } else {
+        persistAnalysisState(brdText, updatedMessages, currentResult)
       }
-    } catch (e) {
-      setMessages(messages) // rollback user message
-      setError(e instanceof Error ? e.message : 'Gagal mengirim pesan. Coba lagi.')
-    } finally {
-      setIsRefining(false)
+
       incrementRefinementRound()
       const updated = getTempSession()
-      if (updated && updated.refinementRounds >= 3) {
+      if (updated && (updated.refinementRounds >= 3 || updated.hasGenerated)) {
         setShowAccountPrompt(true)
       }
+    } catch (e) {
+      setMessages(messages)
+      setError(e instanceof Error ? e.message : 'Gagal memproses. Coba lagi.')
+    } finally {
+      setIsRefining(false)
     }
+  }
+
+  async function handleSendMessage(text: string) {
+    if (!result) return
+    const userMsg: ChatMessage = { role: 'user', content: text }
+    const nextMessages = [...messages, userMsg]
+    setMessages(nextMessages)
+    await callRefineAPI(nextMessages, result)
+  }
+
+  async function handleSubmitQA() {
+    if (!result) return
+    const submissionText = buildQASubmissionMessage(
+      result.clarificationQuestions,
+      qaAnswers
+    )
+    const userMsg: ChatMessage = { role: 'user', content: submissionText }
+    const nextMessages = [...messages, userMsg]
+    setMessages(nextMessages)
+
+    const newResolved = result.clarificationQuestions
+      .map((_, i) => i)
+      .filter((i) => {
+        const qa = qaAnswers[i]
+        return qa && (qa.isOutOfScope || qa.answer.trim().length > 0)
+      })
+    setResolvedIndices((prev) => Array.from(new Set([...prev, ...newResolved])))
+
+    await callRefineAPI(nextMessages, result)
+  }
+
+  async function handleReanalyze() {
+    if (!brdText.trim()) return
+    await handleAnalyze(brdText)
+  }
+
+  function handleQAAnswerChange(index: number, answer: string) {
+    setQaAnswers((prev) => {
+      const next = [...prev]
+      next[index] = { ...(next[index] ?? { answer: '', isOutOfScope: false }), answer }
+      return next
+    })
+  }
+
+  function handleQAOutOfScopeChange(index: number, checked: boolean) {
+    setQaAnswers((prev) => {
+      const next = [...prev]
+      next[index] = { ...(next[index] ?? { answer: '', isOutOfScope: false }), isOutOfScope: checked }
+      return next
+    })
   }
 
   async function handleFinalize() {
@@ -215,7 +272,6 @@ export default function AnalyzePage() {
     setIsFinalizing(true)
     setError(undefined)
 
-    // Phase 1 save — persist conversation before generating requirements
     try {
       const saveRes = await fetch('/api/save-session', {
         method: 'POST',
@@ -241,7 +297,6 @@ export default function AnalyzePage() {
       return
     }
 
-    // Generate requirements
     try {
       const res = await fetch('/api/requirements', {
         method: 'POST',
@@ -269,7 +324,6 @@ export default function AnalyzePage() {
       }
       setShowAccountPrompt(true)
 
-      // Phase 2 save — fire and forget
       fetch('/api/save-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -336,7 +390,7 @@ export default function AnalyzePage() {
           <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
           <p className="mt-1 text-sm text-gray-500">
             {isRefiningPhase
-              ? 'Jawab pertanyaan klarifikasi, lalu klik Finalize untuk generate requirements.'
+              ? 'Jawab pertanyaan klarifikasi atau chat langsung. Generate user stories saat BRD sudah cukup jelas.'
               : 'Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.'}
           </p>
         </div>
@@ -360,7 +414,7 @@ export default function AnalyzePage() {
               />
             ) : (
               <div className="flex flex-col gap-4">
-                {/* BRD summary + analysis toggle */}
+                {/* BRD summary + edit toggle */}
                 <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-2 flex items-center justify-between">
                   <span className="text-xs text-gray-500">BRD yang dianalisis</span>
                   <div className="flex items-center gap-3">
@@ -370,7 +424,7 @@ export default function AnalyzePage() {
                     <button
                       onClick={() => setShowAnalysis((v) => !v)}
                       className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                      title={showAnalysis ? 'Sembunyikan analisis' : 'Lihat hasil analisis'}
+                      title={showAnalysis ? 'Sembunyikan teks BRD' : 'Edit teks BRD'}
                     >
                       <span
                         className={[
@@ -385,56 +439,41 @@ export default function AnalyzePage() {
                           ].join(' ')}
                         />
                       </span>
-                      Analisis
+                      Edit BRD
                     </button>
                   </div>
                 </div>
 
-                {/* Collapsible inline analysis */}
-                {showAnalysis && result && (
-                  <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 max-h-60 overflow-y-auto text-xs text-gray-700 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-indigo-700">Hasil Analisis Awal</span>
-                      <span className="text-indigo-600 font-medium">
-                        Readiness: {result.readinessScore}/100 · {result.readinessLabel}
-                      </span>
-                    </div>
-                    {result.clarificationQuestions.length > 0 && (
-                      <div>
-                        <p className="font-medium text-gray-600 mb-1">Pertanyaan Klarifikasi:</p>
-                        <ol className="flex flex-col gap-1 list-decimal list-inside">
-                          {result.clarificationQuestions.map((q, i) => (
-                            <li key={i} className="leading-relaxed">{q}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                    {result.gapList.length > 0 && (
-                      <div>
-                        <p className="font-medium text-gray-600 mb-1">Gap yang Ditemukan:</p>
-                        <ul className="flex flex-col gap-1">
-                          {result.gapList.map((g, i) => (
-                            <li key={i} className="flex gap-1.5">
-                              <span className={[
-                                'font-semibold shrink-0',
-                                g.severity === 'high' ? 'text-red-600' : g.severity === 'medium' ? 'text-yellow-600' : 'text-gray-500',
-                              ].join(' ')}>
-                                [{g.severity.toUpperCase()}]
-                              </span>
-                              <span>{g.category}: {g.description}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* Collapsible BRD edit */}
+                {showAnalysis && (
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      value={brdText}
+                      onChange={(e) => setBrdText(e.target.value)}
+                      rows={8}
+                      className="w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <p className="text-xs text-gray-400">Edit BRD lalu klik &ldquo;Analisis Ulang&rdquo; di bawah untuk memperbarui gap analysis.</p>
                   </div>
+                )}
+
+                {/* Q&A Cards */}
+                {result && result.clarificationQuestions.length > 0 && (
+                  <QACards
+                    questions={result.clarificationQuestions}
+                    qaAnswers={qaAnswers}
+                    resolvedIndices={resolvedIndices}
+                    isLoading={isRefining}
+                    onAnswerChange={handleQAAnswerChange}
+                    onOutOfScopeChange={handleQAOutOfScopeChange}
+                    onSubmit={handleSubmitQA}
+                  />
                 )}
 
                 <RefinementChat
                   messages={messages}
                   onSend={handleSendMessage}
-                  readyToFinalize={readyToFinalize}
-                  onFinalize={handleFinalize}
+                  onReanalyze={handleReanalyze}
                   isLoading={isRefining}
                   disabled={phase === 'finalizing' || phase === 'done'}
                 />
@@ -443,11 +482,7 @@ export default function AnalyzePage() {
           </div>
 
           {/* Right col */}
-          {phase === 'input' || phase === 'analyzing' ? (
-            <OutputPanel result={result} isLoading={phase === 'analyzing'} />
-          ) : phase === 'refining' ? (
-            <OutputPanel result={result} isLoading={false} />
-          ) : (
+          {phase === 'done' ? (
             <RequirementsPanel
               requirements={requirements}
               isLoading={isFinalizing}
@@ -456,6 +491,13 @@ export default function AnalyzePage() {
                 setRequirements(null)
                 setIsFinalizing(false)
               }}
+            />
+          ) : (
+            <OutputPanel
+              result={result}
+              isLoading={phase === 'analyzing'}
+              onGenerate={isRefiningPhase ? handleFinalize : undefined}
+              isGenerating={isFinalizing}
             />
           )}
         </div>
