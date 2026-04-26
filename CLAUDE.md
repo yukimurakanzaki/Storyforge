@@ -191,4 +191,5 @@ Weekly Active Analyzers (WAA) — unique users ≥1 analysis per rolling 7 days
 \- No manual action needed
 
 \- Git commit manually (end of week or milestone)
+always provide guide on what to do next when claude is done its work, since the user is non technical product owner
 
