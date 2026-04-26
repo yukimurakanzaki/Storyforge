@@ -1,6 +1,6 @@
 'use client'
 
-import { QAAnswer } from '@/types'
+import type { QAAnswer } from '@/types'
 
 interface QACardProps {
   question: string
