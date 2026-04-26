@@ -32,6 +32,7 @@ const FRESH_SESSION: TempSession = {
   requirements: null,
   refinementRounds: 0,
   hasGenerated: false,
+  qaAnswers: [],
 }
 
 const EXPIRED_SESSION: TempSession = {

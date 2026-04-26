@@ -12,6 +12,7 @@ export function getTempSession(): TempSession | null {
       localStorage.removeItem(KEY)
       return null
     }
+    session.qaAnswers ??= []
     return session
   } catch {
     return null
