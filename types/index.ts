@@ -26,3 +26,44 @@ export interface UserSubscription {
   status: 'active' | 'cancelled' | 'grace_period' | 'frozen'
   currentPeriodEnd: string | null
 }
+
+export type Phase = 'input' | 'analyzing' | 'refining' | 'finalizing' | 'done'
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface QAAnswer {
+  answer: string
+  isOutOfScope: boolean
+}
+
+export interface Story {
+  title: string
+  description: string
+  acceptanceCriteria: string[]
+}
+
+export interface Epic {
+  title: string
+  description: string
+  stories: Story[]
+}
+
+export interface RequirementsResult {
+  epics: Epic[]
+  generatedAt: string
+}
+
+export interface TempSession {
+  id: string
+  createdAt: string
+  brdText: string
+  messages: ChatMessage[]
+  result: AnalysisResult | null
+  requirements: RequirementsResult | null
+  refinementRounds: number
+  hasGenerated: boolean
+  qaAnswers: QAAnswer[]
+}

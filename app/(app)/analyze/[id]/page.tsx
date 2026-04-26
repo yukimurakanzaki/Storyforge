@@ -78,7 +78,7 @@ export default async function AnalysisDetailPage({ params }: Props) {
           <p className="mt-1 text-sm text-gray-400">{date}</p>
         </div>
 
-        <OutputPanel result={result} isPro={isPro} />
+        <OutputPanel result={result} />
 
         {/* BRD Text preview */}
         <details className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm">

@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { AnalysisResult, GapItem } from '@/types'
+import type { AnalysisResult, GapItem } from '@/types'
 import { Badge } from '@/components/ui/Badge'
 import { READINESS_LABELS } from '@/lib/constants'
 
 interface OutputPanelProps {
   result?: AnalysisResult
   isLoading?: boolean
-  isPro?: boolean
+  onGenerate?: () => void
+  isGenerating?: boolean
 }
 
 function getReadinessColor(score: number): 'green' | 'yellow' | 'red' {
@@ -46,25 +46,12 @@ function LoadingSkeleton() {
   )
 }
 
-function formatCopyText(questions: string[], isPro: boolean): string {
-  const date = new Date().toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-  let text = `Pertanyaan Klarifikasi dari Analisis BRD — ${date}\n\n`
-  questions.forEach((q, i) => {
-    text += `${i + 1}. ${q}\n`
-  })
-  if (!isPro) {
-    text += `\nDianalisis oleh StoryForge.id`
-  }
-  return text
-}
-
-export function OutputPanel({ result, isLoading = false, isPro = false }: OutputPanelProps) {
-  const [copied, setCopied] = useState(false)
-
+export function OutputPanel({
+  result,
+  isLoading = false,
+  onGenerate,
+  isGenerating = false,
+}: OutputPanelProps) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -85,13 +72,17 @@ export function OutputPanel({ result, isLoading = false, isPro = false }: Output
 
   const readinessColor = getReadinessColor(result.readinessScore)
   const readinessLabel = getReadinessLabel(result.readinessScore)
+  const isReadyToGenerate = result.readinessScore >= 80
 
-  async function handleCopyQuestions() {
-    if (!result) return
-    const text = formatCopyText(result.clarificationQuestions, isPro)
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  function handleGenerateClick() {
+    if (!onGenerate) return
+    if (!isReadyToGenerate) {
+      const confirmed = window.confirm(
+        `Readiness score masih ${result!.readinessScore}/100. Generate user stories sekarang?`
+      )
+      if (!confirmed) return
+    }
+    onGenerate()
   }
 
   return (
@@ -137,17 +128,9 @@ export function OutputPanel({ result, isLoading = false, isPro = false }: Output
       {/* Clarification Questions */}
       {result.clarificationQuestions.length > 0 && (
         <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              Pertanyaan Klarifikasi
-            </h3>
-            <button
-              onClick={handleCopyQuestions}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800"
-            >
-              {copied ? 'Tersalin!' : 'Salin Semua'}
-            </button>
-          </div>
+          <h3 className="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+            Pertanyaan Terbuka ({result.clarificationQuestions.length})
+          </h3>
           <ol className="flex flex-col gap-2 list-decimal list-inside">
             {result.clarificationQuestions.map((q, idx) => (
               <li key={idx} className="text-sm text-gray-700">
@@ -156,6 +139,31 @@ export function OutputPanel({ result, isLoading = false, isPro = false }: Output
             ))}
           </ol>
         </section>
+      )}
+
+      {/* Generate Button */}
+      {onGenerate && (
+        <div className="pt-2 border-t border-gray-100">
+          <button
+            onClick={handleGenerateClick}
+            disabled={isGenerating}
+            title={isReadyToGenerate ? '' : 'Readiness masih rendah — kamu tetap bisa generate'}
+            className={[
+              'w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
+              'disabled:opacity-60 disabled:cursor-not-allowed',
+              isReadyToGenerate
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-amber-500 text-white hover:bg-amber-600',
+            ].join(' ')}
+          >
+            {isGenerating ? 'Membuat User Stories...' : 'Generate User Stories'}
+          </button>
+          {!isReadyToGenerate && (
+            <p className="mt-1.5 text-center text-xs text-amber-600">
+              Readiness {result.readinessScore}/100 — tambah klarifikasi untuk hasil lebih baik
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
