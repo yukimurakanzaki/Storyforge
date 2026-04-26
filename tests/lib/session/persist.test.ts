@@ -59,3 +59,30 @@ describe('persistAnalysisState', () => {
     expect(after.id).toBe(before.id)
   })
 })
+
+function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const minutes = Math.floor(diff / 60_000)
+  if (minutes < 60) return `${minutes}m lalu`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}j lalu`
+  const days = Math.floor(hours / 24)
+  return `${days}h lalu`
+}
+
+describe('formatRelativeTime', () => {
+  it('shows minutes for recent times', () => {
+    const recent = new Date(Date.now() - 5 * 60_000).toISOString()
+    expect(formatRelativeTime(recent)).toBe('5m lalu')
+  })
+
+  it('shows hours for times within a day', () => {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000).toISOString()
+    expect(formatRelativeTime(twoHoursAgo)).toBe('2j lalu')
+  })
+
+  it('shows days for older times', () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString()
+    expect(formatRelativeTime(twoDaysAgo)).toBe('2h lalu')
+  })
+})

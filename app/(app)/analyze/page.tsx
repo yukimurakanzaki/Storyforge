@@ -15,6 +15,7 @@ import type {
   RequirementsResult,
 } from '@/types'
 import Link from 'next/link'
+import { SessionSidebar } from '@/components/analyze/SessionSidebar'
 import {
   initTempSession,
   saveTempSession,
@@ -118,6 +119,18 @@ export default function AnalyzePage() {
       return next
     })
   }, [result])
+
+  function handleNewSession() {
+    setBrdText('')
+    setPhase('input')
+    setResult(undefined)
+    setMessages([])
+    setQaAnswers([])
+    setResolvedIndices([])
+    setRequirements(null)
+    setError(undefined)
+    setShowAccountPrompt(false)
+  }
 
   async function handleAnalyze(text: string) {
     setPhase('analyzing')
@@ -357,7 +370,13 @@ export default function AnalyzePage() {
   const isPostAnalysis = phase === 'refining' || phase === 'finalizing' || phase === 'done'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
+      <SessionSidebar
+        isAuthenticated={isAuthenticated}
+        onNewSession={handleNewSession}
+      />
+
+      <div className="flex-1 min-w-0">
       <header className="border-b border-gray-200 bg-white px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link href="/" className="text-lg font-bold text-indigo-600">
@@ -367,9 +386,11 @@ export default function AnalyzePage() {
             <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
               Dashboard
             </Link>
-            <Link href="/login" className="hover:text-gray-800 transition-colors">
-              Login
-            </Link>
+            {!isAuthenticated && (
+              <Link href="/login" className="hover:text-gray-800 transition-colors">
+                Login
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -515,6 +536,7 @@ export default function AnalyzePage() {
           )}
         </div>
       </main>
+    </div>
     </div>
   )
 }
