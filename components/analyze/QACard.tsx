@@ -6,7 +6,6 @@ interface QACardProps {
   question: string
   index: number
   qaAnswer: QAAnswer
-  isResolved: boolean
   onAnswerChange: (index: number, answer: string) => void
   onOutOfScopeChange: (index: number, checked: boolean) => void
 }
@@ -15,12 +14,9 @@ export function QACard({
   question,
   index,
   qaAnswer,
-  isResolved,
   onAnswerChange,
   onOutOfScopeChange,
 }: QACardProps) {
-  if (isResolved) return null
-
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
       <p className="text-sm font-medium text-gray-800">

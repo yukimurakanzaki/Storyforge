@@ -63,7 +63,6 @@ export function QACards({
               question={q}
               index={i}
               qaAnswer={qaAnswers[i] ?? { answer: '', isOutOfScope: false }}
-              isResolved={false}
               onAnswerChange={onAnswerChange}
               onOutOfScopeChange={onOutOfScopeChange}
             />
