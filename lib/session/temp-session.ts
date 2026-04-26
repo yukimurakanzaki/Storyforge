@@ -1,4 +1,4 @@
-import type { TempSession } from '@/types'
+import type { TempSession, ChatMessage, AnalysisResult } from '@/types'
 
 const KEY = 'sf_temp_session'
 const TTL_MS = 24 * 60 * 60 * 1000
@@ -48,4 +48,14 @@ export function incrementRefinementRound(): void {
   const session = getTempSession()
   if (!session) return
   saveTempSession({ ...session, refinementRounds: session.refinementRounds + 1 })
+}
+
+export function persistAnalysisState(
+  brdText: string,
+  messages: ChatMessage[],
+  result: AnalysisResult | null
+): void {
+  const session = getTempSession()
+  if (!session) return
+  saveTempSession({ ...session, brdText, messages, result })
 }
