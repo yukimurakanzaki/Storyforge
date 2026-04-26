@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BRDInput } from '@/components/analyze/BRDInput'
 import { OutputPanel } from '@/components/analyze/OutputPanel'
 import { RefinementChat } from '@/components/analyze/RefinementChat'
@@ -24,6 +24,12 @@ import {
 } from '@/lib/session/temp-session'
 import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
 import { createClient } from '@/lib/supabase/client'
+
+interface RefineAPIResponse {
+  message: string
+  readyToFinalize: boolean
+  analysis: Omit<AnalysisResult, 'sessionId' | 'createdAt'> | null
+}
 
 function summarizeBrd(text: string): string {
   const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
@@ -65,11 +71,12 @@ export default function AnalyzePage() {
   const [isRefining, setIsRefining] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
-  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [showBrdEdit, setShowBrdEdit] = useState(false)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [qaAnswers, setQaAnswers] = useState<QAAnswer[]>([])
   const [resolvedIndices, setResolvedIndices] = useState<number[]>([])
+  const isFinalizingRef = useRef(false)
 
   useMigrateTempSession(isAuthenticated)
 
@@ -110,7 +117,7 @@ export default function AnalyzePage() {
       }
       return next
     })
-  }, [result?.clarificationQuestions.length])
+  }, [result])
 
   async function handleAnalyze(text: string) {
     setPhase('analyzing')
@@ -160,7 +167,8 @@ export default function AnalyzePage() {
 
   async function callRefineAPI(
     nextMessages: ChatMessage[],
-    currentResult: AnalysisResult
+    currentResult: AnalysisResult,
+    currentBrdText: string
   ): Promise<void> {
     setIsRefining(true)
     setError(undefined)
@@ -170,7 +178,7 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brdText,
+          brdText: currentBrdText,
           initialAnalysis: currentResult,
           messages: nextMessages,
           qaAnswers,
@@ -178,12 +186,12 @@ export default function AnalyzePage() {
       })
 
       if (!res.ok) {
-        setMessages(messages)
+        setMessages(nextMessages.slice(0, -1))
         setError('Gagal memproses. Coba lagi.')
         return
       }
 
-      const parsed = await res.json()
+      const parsed: RefineAPIResponse = await res.json()
 
       const updatedMessages: ChatMessage[] = [
         ...nextMessages,
@@ -197,9 +205,9 @@ export default function AnalyzePage() {
           ...parsed.analysis,
         }
         setResult(updatedResult)
-        persistAnalysisState(brdText, updatedMessages, updatedResult)
+        persistAnalysisState(currentBrdText, updatedMessages, updatedResult)
       } else {
-        persistAnalysisState(brdText, updatedMessages, currentResult)
+        persistAnalysisState(currentBrdText, updatedMessages, currentResult)
       }
 
       incrementRefinementRound()
@@ -208,7 +216,7 @@ export default function AnalyzePage() {
         setShowAccountPrompt(true)
       }
     } catch (e) {
-      setMessages(messages)
+      setMessages(nextMessages.slice(0, -1))
       setError(e instanceof Error ? e.message : 'Gagal memproses. Coba lagi.')
     } finally {
       setIsRefining(false)
@@ -220,18 +228,11 @@ export default function AnalyzePage() {
     const userMsg: ChatMessage = { role: 'user', content: text }
     const nextMessages = [...messages, userMsg]
     setMessages(nextMessages)
-    await callRefineAPI(nextMessages, result)
+    await callRefineAPI(nextMessages, result, brdText)
   }
 
   async function handleSubmitQA() {
     if (!result) return
-    const submissionText = buildQASubmissionMessage(
-      result.clarificationQuestions,
-      qaAnswers
-    )
-    const userMsg: ChatMessage = { role: 'user', content: submissionText }
-    const nextMessages = [...messages, userMsg]
-    setMessages(nextMessages)
 
     const newResolved = result.clarificationQuestions
       .map((_, i) => i)
@@ -239,9 +240,18 @@ export default function AnalyzePage() {
         const qa = qaAnswers[i]
         return qa && (qa.isOutOfScope || qa.answer.trim().length > 0)
       })
+    if (newResolved.length === 0) return
+
+    const submissionText = buildQASubmissionMessage(
+      result.clarificationQuestions,
+      qaAnswers
+    )
+    const userMsg: ChatMessage = { role: 'user', content: submissionText }
+    const nextMessages = [...messages, userMsg]
+    setMessages(nextMessages)
     setResolvedIndices((prev) => Array.from(new Set([...prev, ...newResolved])))
 
-    await callRefineAPI(nextMessages, result)
+    await callRefineAPI(nextMessages, result, brdText)
   }
 
   async function handleReanalyze() {
@@ -266,8 +276,8 @@ export default function AnalyzePage() {
   }
 
   async function handleFinalize() {
-    if (!result) return
-    if (isFinalizing || phase === 'finalizing' || phase === 'done') return
+    if (!result || isFinalizingRef.current) return
+    isFinalizingRef.current = true
     setPhase('finalizing')
     setIsFinalizing(true)
     setError(undefined)
@@ -288,12 +298,14 @@ export default function AnalyzePage() {
         setError(`Gagal menyimpan sesi: ${body.error ?? saveRes.status}. Coba lagi.`)
         setPhase('refining')
         setIsFinalizing(false)
+        isFinalizingRef.current = false
         return
       }
     } catch {
       setError('Gagal menyimpan sesi. Coba lagi.')
       setPhase('refining')
       setIsFinalizing(false)
+      isFinalizingRef.current = false
       return
     }
 
@@ -338,10 +350,11 @@ export default function AnalyzePage() {
       setPhase('refining')
     } finally {
       setIsFinalizing(false)
+      isFinalizingRef.current = false
     }
   }
 
-  const isRefiningPhase = phase === 'refining' || phase === 'finalizing' || phase === 'done'
+  const isPostAnalysis = phase === 'refining' || phase === 'finalizing' || phase === 'done'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -389,7 +402,7 @@ export default function AnalyzePage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {isRefiningPhase
+            {isPostAnalysis
               ? 'Jawab pertanyaan klarifikasi atau chat langsung. Generate user stories saat BRD sudah cukup jelas.'
               : 'Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.'}
           </p>
@@ -404,7 +417,7 @@ export default function AnalyzePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Left col */}
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            {!isRefiningPhase ? (
+            {!isPostAnalysis ? (
               <BRDInput
                 value={brdText}
                 onChange={setBrdText}
@@ -422,20 +435,20 @@ export default function AnalyzePage() {
                       {summarizeBrd(brdText)}
                     </span>
                     <button
-                      onClick={() => setShowAnalysis((v) => !v)}
+                      onClick={() => setShowBrdEdit((v) => !v)}
                       className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                      title={showAnalysis ? 'Sembunyikan teks BRD' : 'Edit teks BRD'}
+                      title={showBrdEdit ? 'Sembunyikan teks BRD' : 'Edit teks BRD'}
                     >
                       <span
                         className={[
                           'inline-flex w-8 h-4 rounded-full transition-colors duration-200 relative',
-                          showAnalysis ? 'bg-indigo-600' : 'bg-gray-300',
+                          showBrdEdit ? 'bg-indigo-600' : 'bg-gray-300',
                         ].join(' ')}
                       >
                         <span
                           className={[
                             'inline-block w-3 h-3 bg-white rounded-full shadow absolute top-0.5 transition-transform duration-200',
-                            showAnalysis ? 'translate-x-4' : 'translate-x-0.5',
+                            showBrdEdit ? 'translate-x-4' : 'translate-x-0.5',
                           ].join(' ')}
                         />
                       </span>
@@ -445,7 +458,7 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Collapsible BRD edit */}
-                {showAnalysis && (
+                {showBrdEdit && (
                   <div className="flex flex-col gap-2">
                     <textarea
                       value={brdText}
@@ -496,7 +509,7 @@ export default function AnalyzePage() {
             <OutputPanel
               result={result}
               isLoading={phase === 'analyzing'}
-              onGenerate={isRefiningPhase ? handleFinalize : undefined}
+              onGenerate={isPostAnalysis ? handleFinalize : undefined}
               isGenerating={isFinalizing}
             />
           )}
