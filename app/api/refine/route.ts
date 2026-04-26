@@ -108,10 +108,7 @@ export async function POST(request: NextRequest) {
       .map((b) => b.text)
       .join('')
 
-    const cleaned = text
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim()
+    const cleaned = text.replace(/```(?:json)?/gi, '').trim()
 
     const parsed: RefineResponse = JSON.parse(cleaned)
 
