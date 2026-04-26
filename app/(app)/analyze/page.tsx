@@ -13,6 +13,8 @@ import {
   RequirementsResult,
 } from '@/types'
 import Link from 'next/link'
+import { initTempSession, saveTempSession, incrementRefinementRound, getTempSession } from '@/lib/session/temp-session'
+import type { TempSession } from '@/types'
 
 function summarizeBrd(text: string): string {
   const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
@@ -41,6 +43,8 @@ export default function AnalyzePage() {
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [tempSession, setTempSession] = useState<TempSession | null>(null)
+  const [showAccountPrompt, setShowAccountPrompt] = useState(false)
 
   // Warn user before leaving mid-session
   useEffect(() => {
@@ -52,6 +56,14 @@ export default function AnalyzePage() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [phase])
+
+  useEffect(() => {
+    const session = initTempSession()
+    setTempSession(session)
+    if (session.refinementRounds >= 3 || session.hasGenerated) {
+      setShowAccountPrompt(true)
+    }
+  }, [])
 
   async function handleAnalyze(text: string) {
     setPhase('analyzing')
@@ -127,6 +139,12 @@ export default function AnalyzePage() {
         return
       }
 
+      if (!res.body) {
+        setMessages(messages) // rollback user message
+        setError('Respons streaming kosong. Coba lagi.')
+        return
+      }
+
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
@@ -169,6 +187,11 @@ export default function AnalyzePage() {
       setError(e instanceof Error ? e.message : 'Gagal mengirim pesan. Coba lagi.')
     } finally {
       setIsRefining(false)
+      incrementRefinementRound()
+      const updated = getTempSession()
+      if (updated && updated.refinementRounds >= 3) {
+        setShowAccountPrompt(true)
+      }
     }
   }
 
@@ -227,6 +250,11 @@ export default function AnalyzePage() {
       const parsed: RequirementsResult = await res.json()
       setRequirements(parsed)
       setPhase('done')
+      const currentSession = getTempSession()
+      if (currentSession) {
+        saveTempSession({ ...currentSession, hasGenerated: true, requirements: parsed })
+      }
+      setShowAccountPrompt(true)
 
       // Phase 2 save — fire and forget
       fetch('/api/save-session', {
@@ -265,6 +293,30 @@ export default function AnalyzePage() {
           </nav>
         </div>
       </header>
+
+      {showAccountPrompt && (
+        <div className="bg-indigo-600 px-4 py-3 text-sm text-white">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <span>
+              Simpan hasil analisis ini — buat akun gratis untuk menyimpan sesi dan mulai analisis baru kapan saja.
+            </span>
+            <div className="flex shrink-0 items-center gap-3">
+              <Link
+                href="/register"
+                className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+              >
+                Daftar Gratis
+              </Link>
+              <button
+                onClick={() => setShowAccountPrompt(false)}
+                className="text-indigo-200 hover:text-white text-xs"
+              >
+                Nanti saja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6">
