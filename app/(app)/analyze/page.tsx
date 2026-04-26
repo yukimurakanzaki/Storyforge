@@ -14,8 +14,8 @@ import {
 } from '@/types'
 import Link from 'next/link'
 import { initTempSession, saveTempSession, incrementRefinementRound, getTempSession } from '@/lib/session/temp-session'
-import type { TempSession } from '@/types'
 import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
+import { createClient } from '@/lib/supabase/client'
 
 function summarizeBrd(text: string): string {
   const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
@@ -44,10 +44,10 @@ export default function AnalyzePage() {
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [showAnalysis, setShowAnalysis] = useState(false)
-  const [tempSession, setTempSession] = useState<TempSession | null>(null)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  useMigrateTempSession(false)
+  useMigrateTempSession(isAuthenticated)
 
   // Warn user before leaving mid-session
   useEffect(() => {
@@ -61,8 +61,18 @@ export default function AnalyzePage() {
   }, [phase])
 
   useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session?.user)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
     const session = initTempSession()
-    setTempSession(session)
     if (session.refinementRounds >= 3 || session.hasGenerated) {
       setShowAccountPrompt(true)
     }
