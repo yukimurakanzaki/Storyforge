@@ -1,39 +1,69 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
-import { AnalysisResult, ChatMessage } from '@/types'
+import type { AnalysisResult, ChatMessage, QAAnswer } from '@/types'
 
 export const runtime = 'nodejs'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function buildQAContext(questions: string[], qaAnswers: QAAnswer[]): string {
+  if (questions.length === 0) return ''
+  const lines = questions.map((q, i) => {
+    const qa = qaAnswers[i]
+    if (!qa) return `  Pertanyaan ${i + 1}: ${q}\n  → Belum dijawab`
+    if (qa.isOutOfScope) return `  Pertanyaan ${i + 1}: ${q}\n  → Di luar scope (dikecualikan)`
+    if (qa.answer.trim()) return `  Pertanyaan ${i + 1}: ${q}\n  → Jawaban: ${qa.answer.trim()}`
+    return `  Pertanyaan ${i + 1}: ${q}\n  → Belum dijawab`
+  })
+  return `JAWABAN PERTANYAAN KLARIFIKASI:\n${lines.join('\n')}`
+}
+
 function buildSystemPrompt(
   brdText: string,
-  initialAnalysis: AnalysisResult,
+  currentAnalysis: AnalysisResult,
+  qaAnswers: QAAnswer[],
   turnNumber: number
 ): string {
-  const gapSummary = initialAnalysis.gapList
+  const gapSummary = currentAnalysis.gapList
     .map((g) => `  - [${g.severity.toUpperCase()}] ${g.category}: ${g.description}`)
     .join('\n')
+
+  const qaContext = buildQAContext(currentAnalysis.clarificationQuestions, qaAnswers)
 
   return `Kamu adalah analis requirements berpengalaman yang membantu Product Manager memperjelas kebutuhan produk.
 
 BRD ASLI:
 ${brdText}
 
-HASIL ANALISIS AWAL:
-- Readiness Score: ${initialAnalysis.readinessScore}/100 (${initialAnalysis.readinessLabel})
+ANALISIS SAAT INI:
+- Readiness Score: ${currentAnalysis.readinessScore}/100 (${currentAnalysis.readinessLabel})
 - Gap yang ditemukan:
-${gapSummary}
+${gapSummary || '  (tidak ada)'}
+
+${qaContext}
 
 INSTRUKSI:
-- Tanyakan pertanyaan follow-up berdasarkan jawaban PM untuk memperjelas requirement yang masih ambigu
-- Maksimal 2 pertanyaan per respons, jawaban singkat dan padat
-- Jika semua gap sudah cukup terjawab, set readyToFinalize: true dan jelaskan apa yang sudah kamu pahami
-- Turn saat ini: ${turnNumber} dari 5. Jika turnNumber >= 5, WAJIB set readyToFinalize: true
-- Gunakan Bahasa Indonesia yang natural
+Berdasarkan percakapan terbaru dan jawaban Q&A di atas, lakukan DUA hal sekaligus:
 
-Kembalikan JSON valid tanpa markdown:
-{"message":"<respons kamu>","readyToFinalize":false}`
+1. ANALISIS ULANG: Perbarui gap list dan readiness score. Tutup gap yang sudah terjawab. Tambahkan gap baru jika percakapan mengungkap masalah baru.
+2. RESPONS PERCAKAPAN: Jelaskan secara natural — gap mana yang sudah tertutup, gap baru (jika ada), dan satu saran konkret untuk langkah berikutnya.
+
+Aturan readinessScore:
+- 80-100: BRD lengkap, siap dikerjakan engineering
+- 50-79: Ada gap signifikan
+- 0-49: Banyak gap kritis
+
+Turn saat ini: ${turnNumber}. Jika turnNumber >= 5 atau readinessScore >= 80, set readyToFinalize: true.
+Gunakan Bahasa Indonesia yang natural.
+
+Kembalikan JSON valid TANPA markdown, TANPA code block:
+{"message":"<respons percakapan>","readyToFinalize":false,"analysis":{"gapList":[{"category":"...","description":"...","severity":"high|medium|low"}],"clarificationQuestions":["..."],"readinessScore":0,"readinessLabel":"Perlu Klarifikasi"}}`
+}
+
+interface RefineResponse {
+  message: string
+  readyToFinalize: boolean
+  analysis: Omit<AnalysisResult, 'sessionId' | 'createdAt'>
 }
 
 export async function POST(request: NextRequest) {
@@ -41,10 +71,12 @@ export async function POST(request: NextRequest) {
     brdText,
     initialAnalysis,
     messages,
+    qaAnswers = [],
   }: {
     brdText: string
     initialAnalysis: AnalysisResult
     messages: ChatMessage[]
+    qaAnswers?: QAAnswer[]
   } = await request.json()
 
   if (!brdText || !initialAnalysis || !messages) {
@@ -63,15 +95,15 @@ export async function POST(request: NextRequest) {
   }))
 
   try {
-    const message = await client.messages.create({
+    const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+      max_tokens: 6000,
       temperature: 0,
-      system: buildSystemPrompt(brdText, initialAnalysis, turnNumber),
+      system: buildSystemPrompt(brdText, initialAnalysis, qaAnswers, turnNumber),
       messages: anthropicMessages,
     })
 
-    const text = message.content
+    const text = response.content
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('')
@@ -81,8 +113,13 @@ export async function POST(request: NextRequest) {
       .replace(/\s*```$/, '')
       .trim()
 
-    const parsed: { message: string; readyToFinalize: boolean } = JSON.parse(cleaned)
-    return NextResponse.json(parsed)
+    const parsed: RefineResponse = JSON.parse(cleaned)
+
+    return NextResponse.json({
+      message: parsed.message,
+      readyToFinalize: parsed.readyToFinalize ?? false,
+      analysis: parsed.analysis ?? null,
+    })
   } catch (err) {
     console.error('[api/refine] error:', err)
     return NextResponse.json({ error: 'Terjadi kesalahan. Coba lagi.' }, { status: 500 })
