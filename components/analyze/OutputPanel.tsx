@@ -1,12 +1,14 @@
 'use client'
 
-import { AnalysisResult, GapItem } from '@/types'
+import type { AnalysisResult, GapItem } from '@/types'
 import { Badge } from '@/components/ui/Badge'
 import { READINESS_LABELS } from '@/lib/constants'
 
 interface OutputPanelProps {
   result?: AnalysisResult
   isLoading?: boolean
+  onGenerate?: () => void
+  isGenerating?: boolean
 }
 
 function getReadinessColor(score: number): 'green' | 'yellow' | 'red' {
@@ -44,7 +46,12 @@ function LoadingSkeleton() {
   )
 }
 
-export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
+export function OutputPanel({
+  result,
+  isLoading = false,
+  onGenerate,
+  isGenerating = false,
+}: OutputPanelProps) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -65,6 +72,18 @@ export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
 
   const readinessColor = getReadinessColor(result.readinessScore)
   const readinessLabel = getReadinessLabel(result.readinessScore)
+  const isReadyToGenerate = result.readinessScore >= 80
+
+  function handleGenerateClick() {
+    if (!onGenerate) return
+    if (!isReadyToGenerate) {
+      const confirmed = window.confirm(
+        `Readiness score masih ${result!.readinessScore}/100. Generate user stories sekarang?`
+      )
+      if (!confirmed) return
+    }
+    onGenerate()
+  }
 
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -110,7 +129,7 @@ export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
       {result.clarificationQuestions.length > 0 && (
         <section>
           <h3 className="mb-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-            Pertanyaan Klarifikasi
+            Pertanyaan Terbuka ({result.clarificationQuestions.length})
           </h3>
           <ol className="flex flex-col gap-2 list-decimal list-inside">
             {result.clarificationQuestions.map((q, idx) => (
@@ -120,6 +139,31 @@ export function OutputPanel({ result, isLoading = false }: OutputPanelProps) {
             ))}
           </ol>
         </section>
+      )}
+
+      {/* Generate Button */}
+      {onGenerate && (
+        <div className="pt-2 border-t border-gray-100">
+          <button
+            onClick={handleGenerateClick}
+            disabled={isGenerating}
+            title={isReadyToGenerate ? '' : 'Readiness masih rendah — kamu tetap bisa generate'}
+            className={[
+              'w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors',
+              'disabled:opacity-60 disabled:cursor-not-allowed',
+              isReadyToGenerate
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-amber-500 text-white hover:bg-amber-600',
+            ].join(' ')}
+          >
+            {isGenerating ? 'Membuat User Stories...' : 'Generate User Stories'}
+          </button>
+          {!isReadyToGenerate && (
+            <p className="mt-1.5 text-center text-xs text-amber-600">
+              Readiness {result.readinessScore}/100 — tambah klarifikasi untuk hasil lebih baik
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
