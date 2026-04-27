@@ -527,6 +527,12 @@ export default function AnalyzePage() {
                 setRequirements(null)
                 setIsFinalizing(false)
               }}
+              onRegenerate={() => {
+                setRequirements(null)
+                setIsFinalizing(false)
+                isFinalizingRef.current = false
+                handleFinalize()
+              }}
             />
           ) : (
             <OutputPanel
