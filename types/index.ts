@@ -39,20 +39,41 @@ export interface QAAnswer {
   isOutOfScope: boolean
 }
 
-export interface Story {
-  title: string
-  description: string
-  acceptanceCriteria: string[]
+export interface InvestCriteria {
+  independent: string
+  negotiable: string
+  valuable: string
+  estimable: string
+  small: string
+  testable: string
 }
 
-export interface Epic {
+export interface GherkinScenario {
   title: string
+  given: string[]
+  when: string[]
+  then: string[]
+}
+
+export interface FieldRow {
+  fieldName: string
   description: string
-  stories: Story[]
+  dataType: string
+  example: string
+}
+
+export interface UserStory {
+  title: string
+  asA: string
+  iWant: string
+  soThat: string
+  investNotes: InvestCriteria
+  acceptanceCriteria: GherkinScenario[]
+  fieldContextTable?: FieldRow[]
 }
 
 export interface RequirementsResult {
-  epics: Epic[]
+  userStories: UserStory[]
   generatedAt: string
 }
 

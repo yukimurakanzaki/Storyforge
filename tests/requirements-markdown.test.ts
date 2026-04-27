@@ -3,30 +3,59 @@ import { buildMarkdown } from '@/lib/requirements-markdown'
 import { RequirementsResult } from '@/types'
 
 const SAMPLE: RequirementsResult = {
-  generatedAt: '2026-04-14T00:00:00.000Z',
-  epics: [
+  generatedAt: '2026-04-28T00:00:00.000Z',
+  userStories: [
     {
-      title: 'Notifikasi Pembayaran',
-      description: 'Epic untuk sistem notifikasi.',
-      stories: [
+      title: 'Login dengan Email',
+      asA: 'pengguna terdaftar',
+      iWant: 'masuk menggunakan email dan password',
+      soThat: 'saya bisa mengakses dashboard saya',
+      investNotes: {
+        independent: 'Tidak bergantung pada story lain',
+        negotiable: 'Detail UI bisa diubah',
+        valuable: 'Mengaktifkan akses ke semua fitur',
+        estimable: 'Sekitar 3 hari dev',
+        small: 'Cukup kecil untuk satu sprint',
+        testable: 'Bisa diuji dengan kredensial valid dan invalid',
+      },
+      acceptanceCriteria: [
         {
-          title: 'Terima notifikasi push',
-          description: 'Sebagai pengguna, saya ingin menerima notifikasi push.',
-          acceptanceCriteria: [
-            'Notifikasi terkirim dalam 5 detik',
-            'Notifikasi menampilkan nominal transaksi',
-          ],
+          title: 'Login sukses',
+          given: ['pengguna berada di halaman login', 'pengguna memiliki akun aktif'],
+          when: ['pengguna memasukkan email dan password yang benar', 'pengguna klik tombol Masuk'],
+          then: ['pengguna diarahkan ke dashboard', 'sesi login tersimpan selama 30 hari'],
         },
+        {
+          title: 'Login gagal',
+          given: ['pengguna berada di halaman login'],
+          when: ['pengguna memasukkan password yang salah'],
+          then: ['pesan error ditampilkan', 'pengguna tetap di halaman login'],
+        },
+      ],
+      fieldContextTable: [
+        { fieldName: 'email', description: 'Alamat email pengguna', dataType: 'string', example: 'user@email.com' },
+        { fieldName: 'password', description: 'Password akun', dataType: 'string', example: 'min. 8 karakter' },
       ],
     },
     {
-      title: 'Preferensi Notifikasi',
-      description: 'Epic untuk pengaturan notifikasi.',
-      stories: [
+      title: 'Reset Password',
+      asA: 'pengguna yang lupa password',
+      iWant: 'menerima link reset password ke email saya',
+      soThat: 'saya bisa membuat password baru',
+      investNotes: {
+        independent: 'Independen dari story login',
+        negotiable: 'Metode verifikasi bisa diubah',
+        valuable: 'Mengurangi friction untuk pengguna yang terkunci',
+        estimable: 'Sekitar 2 hari dev',
+        small: 'Satu alur tunggal',
+        testable: 'Diuji dengan email terdaftar dan tidak terdaftar',
+      },
+      acceptanceCriteria: [
         {
-          title: 'Nonaktifkan notifikasi',
-          description: 'Sebagai pengguna, saya ingin menonaktifkan notifikasi.',
-          acceptanceCriteria: ['Toggle tersedia di halaman Pengaturan'],
+          title: 'Kirim link reset',
+          given: ['pengguna berada di halaman lupa password'],
+          when: ['pengguna memasukkan email terdaftar dan klik Kirim'],
+          then: ['email berisi link reset terkirim dalam 60 detik', 'link kadaluwarsa setelah 1 jam'],
         },
       ],
     },
@@ -34,40 +63,62 @@ const SAMPLE: RequirementsResult = {
 }
 
 describe('buildMarkdown', () => {
-  it('includes epic titles as h2', () => {
+  it('includes story titles as h2', () => {
     const md = buildMarkdown(SAMPLE)
-    expect(md).toContain('## Notifikasi Pembayaran')
-    expect(md).toContain('## Preferensi Notifikasi')
+    expect(md).toContain('## Login dengan Email')
+    expect(md).toContain('## Reset Password')
   })
 
-  it('includes story titles as h3', () => {
+  it('includes "As a" sentence', () => {
     const md = buildMarkdown(SAMPLE)
-    expect(md).toContain('### Terima notifikasi push')
-    expect(md).toContain('### Nonaktifkan notifikasi')
+    expect(md).toContain('**Sebagai** pengguna terdaftar')
+    expect(md).toContain('**ingin** masuk menggunakan email dan password')
+    expect(md).toContain('**agar** saya bisa mengakses dashboard saya')
   })
 
-  it('includes acceptance criteria as bullet points', () => {
+  it('includes INVEST section', () => {
     const md = buildMarkdown(SAMPLE)
-    expect(md).toContain('- Notifikasi terkirim dalam 5 detik')
-    expect(md).toContain('- Notifikasi menampilkan nominal transaksi')
+    expect(md).toContain('### INVEST')
+    expect(md).toContain('**I — Independent:**')
+    expect(md).toContain('**N — Negotiable:**')
+    expect(md).toContain('**V — Valuable:**')
+    expect(md).toContain('**E — Estimable:**')
+    expect(md).toContain('**S — Small:**')
+    expect(md).toContain('**T — Testable:**')
   })
 
-  it('separates epics with horizontal rule', () => {
+  it('includes Gherkin scenarios', () => {
+    const md = buildMarkdown(SAMPLE)
+    expect(md).toContain('**Scenario:** Login sukses')
+    expect(md).toContain('**Given**')
+    expect(md).toContain('**When**')
+    expect(md).toContain('**Then**')
+  })
+
+  it('includes field context table when present', () => {
+    const md = buildMarkdown(SAMPLE)
+    expect(md).toContain('### Field Context')
+    expect(md).toContain('| Field | Deskripsi | Tipe Data | Contoh |')
+    expect(md).toContain('| email |')
+    expect(md).toContain('| password |')
+  })
+
+  it('omits field context table when not present', () => {
+    const noFieldStory: RequirementsResult = {
+      generatedAt: '2026-04-28T00:00:00.000Z',
+      userStories: [SAMPLE.userStories[1]], // Reset Password has no fieldContextTable
+    }
+    const md = buildMarkdown(noFieldStory)
+    expect(md).not.toContain('### Field Context')
+  })
+
+  it('separates stories with horizontal rule', () => {
     const md = buildMarkdown(SAMPLE)
     expect(md).toContain('---')
   })
 
-  it('handles single epic with no separator', () => {
-    const single: RequirementsResult = {
-      generatedAt: '2026-04-14T00:00:00.000Z',
-      epics: [SAMPLE.epics[0]],
-    }
-    const md = buildMarkdown(single)
-    expect(md).not.toContain('---')
-  })
-
-  it('returns empty string for empty epics', () => {
-    const empty: RequirementsResult = { generatedAt: '2026-04-14T00:00:00.000Z', epics: [] }
+  it('returns empty string for empty userStories', () => {
+    const empty: RequirementsResult = { generatedAt: '2026-04-28T00:00:00.000Z', userStories: [] }
     expect(buildMarkdown(empty)).toBe('')
   })
 })
