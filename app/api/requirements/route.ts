@@ -6,53 +6,62 @@ export const runtime = 'nodejs'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-function buildSystemPrompt(outputTemplate?: string): string {
-  const formatInstructions = outputTemplate
-    ? `TEMPLATE OUTPUT YANG DIMINTA:\n${outputTemplate}`
-    : `FORMAT OUTPUT: Jira Epic/Story standar. Setiap Epic berisi beberapa User Stories. Setiap Story memiliki judul dalam format "Sebagai [role], saya ingin [aksi], agar [manfaat]" jika memungkinkan.`
-
-  return `Kamu adalah analis requirements yang mengubah hasil diskusi klarifikasi BRD menjadi Epic dan User Story yang siap dimasukkan ke Jira.
-
-${formatInstructions}
+const SYSTEM_PROMPT = `Kamu adalah senior product analyst yang mengubah BRD dan hasil klarifikasi menjadi User Stories siap pakai.
 
 INSTRUKSI:
-- Buat Epic dan Story berdasarkan BRD asli DAN semua klarifikasi dari diskusi
-- Setiap acceptance criteria harus terukur dan dapat diuji (bukan "sistem harus baik")
-- Gunakan Bahasa Indonesia
+- Hasilkan maksimal 6 User Stories yang paling penting berdasarkan BRD dan diskusi
+- Setiap story harus INVEST: Independent, Negotiable, Valuable, Estimable, Small, Testable
+- Setiap story memiliki 1-3 Gherkin scenarios (Given/When/Then)
+- Field Context Table hanya diisi jika story melibatkan form input / field data — jika tidak ada form, omit fieldContextTable
+- Gunakan Bahasa Indonesia untuk semua teks
 - Kembalikan JSON valid tanpa markdown
-- BATAS OUTPUT KETAT: maksimal 5 Epic, maksimal 4 Story per Epic, maksimal 3 acceptance criteria per Story
-- Gunakan kalimat pendek dan padat — hindari pengulangan informasi dari BRD
 
-Format JSON:
+FORMAT JSON WAJIB:
 {
-  "epics": [
+  "userStories": [
     {
-      "title": "string",
-      "description": "string (2-3 kalimat konteks bisnis)",
-      "stories": [
+      "title": "string — nama singkat story",
+      "asA": "string — peran user (cth: pengguna terdaftar)",
+      "iWant": "string — aksi yang diinginkan",
+      "soThat": "string — manfaat yang didapat",
+      "investNotes": {
+        "independent": "string — kenapa story ini tidak bergantung pada story lain",
+        "negotiable": "string — aspek apa yang bisa dinegosiasi",
+        "valuable": "string — nilai bisnis yang dihasilkan",
+        "estimable": "string — estimasi kasar effort",
+        "small": "string — kenapa cukup kecil untuk satu sprint",
+        "testable": "string — bagaimana story ini diuji"
+      },
+      "acceptanceCriteria": [
         {
-          "title": "string",
+          "title": "string — nama skenario",
+          "given": ["string — kondisi awal"],
+          "when": ["string — aksi yang dilakukan"],
+          "then": ["string — hasil yang diharapkan"]
+        }
+      ],
+      "fieldContextTable": [
+        {
+          "fieldName": "string",
           "description": "string",
-          "acceptanceCriteria": ["string"]
+          "dataType": "string (cth: string, number, boolean, date)",
+          "example": "string"
         }
       ]
     }
   ],
-  "generatedAt": "ISO 8601 timestamp"
+  "generatedAt": "ISO 8601 timestamp saat ini"
 }`
-}
 
 export async function POST(request: NextRequest) {
   const {
     brdText,
     initialAnalysis,
     messages,
-    outputTemplate,
   }: {
     brdText: string
     initialAnalysis: AnalysisResult
     messages: ChatMessage[]
-    outputTemplate?: string
   } = await request.json()
 
   if (!brdText || !initialAnalysis || !messages) {
@@ -63,17 +72,19 @@ export async function POST(request: NextRequest) {
     .map((g) => `  - [${g.severity.toUpperCase()}] ${g.category}: ${g.description}`)
     .join('\n')
 
-  const contextMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS AWAL:\n- Readiness Score: ${initialAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nHASIL DISKUSI KLARIFIKASI:\n${messages.map((m) => `${m.role === 'user' ? 'PM' : 'Analis'}: ${m.content}`).join('\n\n')}\n\nBuat Epic dan User Story lengkap berdasarkan BRD dan diskusi di atas. Sertakan generatedAt dengan timestamp sekarang dalam format ISO 8601.`
+  const conversationHistory = messages
+    .map((m) => `${m.role === 'user' ? 'PM' : 'Analis'}: ${m.content}`)
+    .join('\n\n')
 
-  const safeTemplate = outputTemplate?.slice(0, 2000)
+  const userMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS:\n- Readiness Score: ${initialAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nDISKUSI KLARIFIKASI:\n${conversationHistory}\n\nBuat User Stories lengkap berdasarkan semua konteks di atas. Sertakan generatedAt dengan timestamp sekarang dalam ISO 8601.`
 
   try {
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8000,
       temperature: 0,
-      system: buildSystemPrompt(safeTemplate),
-      messages: [{ role: 'user', content: contextMessage }],
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }],
     })
 
     const text = message.content
@@ -90,6 +101,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('[api/requirements] error:', err)
-    return NextResponse.json({ error: 'Gagal membuat requirements. Coba lagi.' }, { status: 500 })
+    return NextResponse.json({ error: 'Gagal membuat user stories. Coba lagi.' }, { status: 500 })
   }
 }
