@@ -48,6 +48,14 @@ export function readGuestUsage(): { count: number; limit: number } {
   }
 }
 
+export function canGuestAnalyze(): { allowed: boolean; count: number; limit: number } {
+  const usage = readGuestUsage()
+  return {
+    ...usage,
+    allowed: usage.count < usage.limit,
+  }
+}
+
 export function incrementGuestUsage(): { count: number; limit: number } {
   const current = readGuestUsage()
   if (typeof window === 'undefined') return current

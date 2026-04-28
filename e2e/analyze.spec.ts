@@ -24,7 +24,7 @@ test('user can navigate to analyze page and see mocked analysis results', async 
 
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: /StoryForge/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'StoryForge.id' })).toBeVisible()
   await page.getByRole('link', { name: /Mulai Analisis/i }).click()
 
   await expect(page).toHaveURL(/\/analyze$/)
@@ -95,18 +95,26 @@ test('user can refine and generate requirements from mocked API', async ({ page 
       contentType: 'application/json',
       body: JSON.stringify({
         generatedAt: '2026-04-23T13:15:00.000Z',
-        epics: [
+        userStories: [
           {
-            title: 'Kelola Refund',
-            description: 'Epic untuk memastikan refund diproses dengan approval yang tepat.',
-            stories: [
+            title: 'Ajukan Refund',
+            asA: 'finance admin',
+            iWant: 'mengajukan refund',
+            soThat: 'pengembalian dana bisa diproses',
+            investNotes: {
+              independent: 'Dapat dibangun tanpa fitur dispute lanjutan.',
+              negotiable: 'Detail approval bisa disesuaikan dengan SOP finance.',
+              valuable: 'Mengurangi refund manual dan memperjelas tanggung jawab.',
+              estimable: 'Scope form dan approval cukup jelas.',
+              small: 'Bisa selesai dalam satu sprint.',
+              testable: 'Dapat diuji melalui skenario pengajuan refund.',
+            },
+            acceptanceCriteria: [
               {
-                title: 'Sebagai finance admin, saya ingin mengajukan refund, agar pengembalian dana bisa diproses.',
-                description: 'Pengajuan refund mencatat alasan dan nominal refund.',
-                acceptanceCriteria: [
-                  'Form refund menyimpan alasan refund',
-                  'Nominal refund wajib lebih besar dari 0',
-                ],
+                title: 'Refund diajukan dengan alasan',
+                given: ['Finance admin membuka form refund'],
+                when: ['Admin mengisi alasan refund'],
+                then: ['Form refund menyimpan alasan refund'],
               },
             ],
           },
@@ -130,14 +138,9 @@ test('user can refine and generate requirements from mocked API', async ({ page 
 
   await page.getByRole('button', { name: /Generate User Stories/i }).click()
 
-  await expect(page.getByText('Export Requirements')).toBeVisible()
-  await expect(page.getByText('Kelola Refund')).toBeVisible()
-  await expect(
-    page.getByText(
-      'Sebagai finance admin, saya ingin mengajukan refund, agar pengembalian dana bisa diproses.',
-      { exact: true },
-    ),
-  ).toBeVisible()
+  await expect(page.getByText('User Stories (1)')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ajukan Refund' })).toBeVisible()
+  await expect(page.getByText(/Sebagai finance admin/)).toBeVisible()
   await expect(page.getByText('Form refund menyimpan alasan refund')).toBeVisible()
 })
 
@@ -185,4 +188,39 @@ test('user sees a helpful error when refinement fails', async ({ page }) => {
 
   await expect(page.getByText('Gagal memproses. Coba lagi.')).toBeVisible()
   await expect(page.getByText('Payment gateway mana yang akan digunakan?', { exact: true })).toBeVisible()
+})
+
+test('guest at quota cannot start another analysis', async ({ page }) => {
+  let analyzeCalls = 0
+  await page.route('**/api/analyze', async (route) => {
+    analyzeCalls += 1
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        gapList: [],
+        clarificationQuestions: [],
+        readinessScore: 90,
+        readinessLabel: 'Siap',
+      }),
+    })
+  })
+
+  await page.goto('/analyze')
+  await page.evaluate(() => {
+    window.localStorage.setItem(
+      'sf_guest_usage_v1',
+      JSON.stringify({
+        count: 5,
+        resetAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+    )
+  })
+  await page.reload()
+
+  await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
+  await page.getByRole('button', { name: /Analyze BRD/i }).click()
+
+  await expect(page.getByText(/Batas analisis gratis tercapai/i)).toBeVisible()
+  expect(analyzeCalls).toBe(0)
 })

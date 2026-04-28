@@ -25,6 +25,11 @@ import {
 } from '@/lib/session/temp-session'
 import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
 import { createClient } from '@/lib/supabase/client'
+import {
+  canGuestAnalyze,
+  incrementGuestUsage,
+  readGuestUsage,
+} from '@/lib/guest-usage'
 
 interface RefineAPIResponse {
   message: string
@@ -75,6 +80,10 @@ export default function AnalyzePage() {
   const [showBrdEdit, setShowBrdEdit] = useState(false)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [guestUsage, setGuestUsage] = useState<{ count: number; limit: number }>({
+    count: 0,
+    limit: 5,
+  })
   const [qaAnswers, setQaAnswers] = useState<QAAnswer[]>([])
   const [resolvedIndices, setResolvedIndices] = useState<number[]>([])
   const isFinalizingRef = useRef(false)
@@ -85,9 +94,11 @@ export default function AnalyzePage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user)
+      if (!user) setGuestUsage(readGuestUsage())
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session?.user)
+      if (!session?.user) setGuestUsage(readGuestUsage())
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -135,6 +146,16 @@ export default function AnalyzePage() {
   }
 
   async function handleAnalyze(text: string) {
+    if (!isAuthenticated) {
+      const usageCheck = canGuestAnalyze()
+      setGuestUsage({ count: usageCheck.count, limit: usageCheck.limit })
+      if (!usageCheck.allowed) {
+        setError('Batas analisis gratis tercapai. Masuk untuk menyimpan riwayat dan melanjutkan analisis.')
+        setShowAccountPrompt(true)
+        return
+      }
+    }
+
     setPhase('analyzing')
     setResult(undefined)
     setError(undefined)
@@ -146,7 +167,10 @@ export default function AnalyzePage() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
+        },
         body: JSON.stringify({ text }),
       })
 
@@ -174,6 +198,9 @@ export default function AnalyzePage() {
       setMessages([firstMsg])
       setPhase('refining')
       persistAnalysisState(text, [firstMsg], analysisResult)
+      if (!isAuthenticated) {
+        setGuestUsage(incrementGuestUsage())
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Terjadi kesalahan. Coba lagi.')
       setPhase('input')
@@ -298,23 +325,25 @@ export default function AnalyzePage() {
     setError(undefined)
 
     try {
-      const saveRes = await fetch('/api/save-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: result.sessionId,
-          brdText,
-          initialAnalysis: result,
-          messages,
-        }),
-      })
-      if (!saveRes.ok) {
-        const body = await saveRes.json().catch(() => ({}))
-        setError(`Gagal menyimpan sesi: ${body.error ?? saveRes.status}. Coba lagi.`)
-        setPhase('refining')
-        setIsFinalizing(false)
-        isFinalizingRef.current = false
-        return
+      if (isAuthenticated) {
+        const saveRes = await fetch('/api/save-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: result.sessionId,
+            brdText,
+            initialAnalysis: result,
+            messages,
+          }),
+        })
+        if (!saveRes.ok) {
+          const body = await saveRes.json().catch(() => ({}))
+          setError(`Gagal menyimpan sesi: ${body.error ?? saveRes.status}. Coba lagi.`)
+          setPhase('refining')
+          setIsFinalizing(false)
+          isFinalizingRef.current = false
+          return
+        }
       }
     } catch {
       setError('Gagal menyimpan sesi. Coba lagi.')
@@ -351,15 +380,17 @@ export default function AnalyzePage() {
       }
       setShowAccountPrompt(true)
 
-      fetch('/api/save-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: result.sessionId,
-          requirements: parsed,
-          status: 'done',
-        }),
-      }).catch((err) => console.error('[phase-2 save]', err))
+      if (isAuthenticated) {
+        fetch('/api/save-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: result.sessionId,
+            requirements: parsed,
+            status: 'done',
+          }),
+        }).catch((err) => console.error('[phase-2 save]', err))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal membuat requirements. Coba lagi.')
       setPhase('refining')
@@ -385,9 +416,11 @@ export default function AnalyzePage() {
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
-              Dashboard
-            </Link>
+            {isAuthenticated && (
+              <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
+                Dashboard
+              </Link>
+            )}
             {!isAuthenticated && (
               <Link href="/login" className="hover:text-gray-800 transition-colors">
                 Login
@@ -423,12 +456,21 @@ export default function AnalyzePage() {
 
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {isPostAnalysis
-              ? 'Jawab pertanyaan klarifikasi atau chat langsung. Generate user stories saat BRD sudah cukup jelas.'
-              : 'Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.'}
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                {isPostAnalysis
+                  ? 'Jawab pertanyaan klarifikasi atau chat langsung. Generate user stories saat BRD sudah cukup jelas.'
+                  : 'Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.'}
+              </p>
+            </div>
+            {!isAuthenticated && (
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
+                Guest: {guestUsage.count}/{guestUsage.limit} analisis gratis
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (

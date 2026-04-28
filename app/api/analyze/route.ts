@@ -7,6 +7,43 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+const MAX_ANALYZE_TEXT_CHARS = 150_000
+
+type AnalyzeValidationResult =
+  | { valid: true; text: string }
+  | { valid: false; error: string; status: number }
+
+export function validateAnalyzePayload(body: unknown): AnalyzeValidationResult {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Missing request body', status: 400 }
+  }
+
+  const text = (body as { text?: unknown }).text
+  if (typeof text !== 'string' || text.trim().length === 0) {
+    return { valid: false, error: 'Missing text', status: 400 }
+  }
+
+  if (text.length > MAX_ANALYZE_TEXT_CHARS) {
+    return { valid: false, error: 'BRD text too large', status: 413 }
+  }
+
+  return { valid: true, text }
+}
+
+function jsonResponse(
+  body: unknown,
+  init: ResponseInit & { mode: 'guest' | 'user' }
+) {
+  const headers = new Headers(init.headers)
+  headers.set('Cache-Control', 'no-store')
+  headers.set('X-Mode', init.mode)
+
+  return NextResponse.json(body, {
+    ...init,
+    headers,
+  })
+}
+
 const SYSTEM_PROMPT = `Kamu adalah analis BRD (Business Requirements Document) berpengalaman untuk Product Manager di Indonesia.
 
 Analisis BRD yang diberikan dan kembalikan hasil dalam format JSON valid — tanpa markdown, tanpa code block, langsung JSON saja.
@@ -46,10 +83,28 @@ Fokus pencarian gap pada:
 - Asumsi yang tidak didokumentasikan`
 
 export async function POST(request: NextRequest) {
-  const { text } = await request.json()
+  const mode = request.headers.get('x-guest-mode') === '1' ? 'guest' : 'user'
 
-  if (!text) {
-    return NextResponse.json({ error: 'Missing text' }, { status: 400 })
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse(
+      { error: 'Invalid JSON', message: 'Request body tidak valid.', mode },
+      { status: 400, mode }
+    )
+  }
+
+  const validation = validateAnalyzePayload(body)
+  if (!validation.valid) {
+    return jsonResponse(
+      {
+        error: validation.error,
+        message: validation.error,
+        mode,
+      },
+      { status: validation.status, mode }
+    )
   }
 
   try {
@@ -61,7 +116,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${text}`,
+          content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
         },
       ],
     })
@@ -77,9 +132,16 @@ export async function POST(request: NextRequest) {
       .trim()
 
     const parsed = JSON.parse(cleaned)
-    return NextResponse.json(parsed)
+    return jsonResponse(parsed, { status: 200, mode })
   } catch (err) {
     console.error('[api/analyze] error:', err)
-    return NextResponse.json({ error: 'Terjadi kesalahan. Coba lagi.' }, { status: 500 })
+    return jsonResponse(
+      {
+        error: 'Terjadi kesalahan. Coba lagi.',
+        message: 'Terjadi kesalahan. Coba lagi.',
+        mode,
+      },
+      { status: 500, mode }
+    )
   }
 }

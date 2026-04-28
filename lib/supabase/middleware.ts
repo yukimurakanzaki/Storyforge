@@ -1,6 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+export function isProtectedAppPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/analyze/') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/set-password')
+  )
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -35,12 +44,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/register') ||
     pathname.startsWith('/signup')
 
-  const isProtectedPage =
-    pathname === '/analyze' ||
-    pathname.startsWith('/analyze/') ||
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/settings') ||
-    pathname.startsWith('/set-password')
+  const isProtectedPage = isProtectedAppPath(pathname)
 
   // Redirect logged-in users away from auth pages (not set-password)
   if (user && isAuthPage) {

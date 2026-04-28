@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-04-05 (19:30 WIB)
-**Status:** Pre-MVP, API live + domain secured
+**Last Updated:** 2026-04-28 (WIB)
+**Status:** Pre-MVP, bounded guest mode built, validation green
 
 ---
 
@@ -20,7 +20,12 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-04-05-API-Live|2026-04-05: API Live + Domain Secured]] — **LATEST**
+- [[03-Sessions/2026-04-28-guest-mode-activation|2026-04-28: Guest Mode Activation]] — **LATEST**
+- [[03-Sessions/2026-04-23-playwright-e2e-error-path-added|2026-04-23: Playwright E2E Error Path Added]] — **LATEST**
+- [[03-Sessions/2026-04-23-playwright-e2e-expanded|2026-04-23: Playwright E2E Expanded]]
+- [[03-Sessions/2026-04-23-playwright-e2e-added|2026-04-23: Playwright E2E Added]]
+- [[03-Sessions/2026-04-23-end-to-end-validation|2026-04-23: End-to-End Validation]]
+- [[03-Sessions/2026-04-05-API-Live|2026-04-05: API Live + Domain Secured]]
 - [[03-Sessions/2026-04-05-API-Fix|2026-04-05: API Fix]] 
 - [[03-Sessions/2026-03-29-PRD-Review|2026-03-29: PRD Review]]
 
@@ -48,7 +53,7 @@
 
 ---
 
-## ✅ Latest Status — 2026-04-05
+## ✅ Latest Status — 2026-04-28
 
 ### Completed ✅
 
@@ -56,8 +61,15 @@
 - ✅ **API architecture fixed** — Anthropic claude-haiku-4-5 server-side, ZDR header active
 - ✅ **Positioning dual segment defined** — PM Indonesia + Vibe Coders
 - ✅ **ANTHROPIC_API_KEY in Vercel** — Environment variable added
-- ✅ **End-to-end test passed** — BRD analysis working, output correct
+- ✅ **Validation pass green** — `npm test` and production `next build` both pass
+- ✅ **Refine stream null-safe** — analyze page now guards missing `res.body`
+- ✅ **Playwright E2E added** — browser smoke coverage now exists for landing to analyze flow
+- ✅ **Playwright E2E expanded** — browser coverage now includes refinement and finalize flow
+- ✅ **Playwright error path added** — browser coverage now checks refine failure handling
 - ✅ **Domain storyforge.id available** — Ready to register
+- ✅ **Guest mode activation built** — `/analyze` is public, guests have local quota, and account-gated persistence remains protected
+- ✅ **Analyze API hardened** — request validation, `no-store`, and mode headers added
+- ✅ **Validation pass green** — `npm test`, Playwright E2E, TypeScript, and production build pass
 
 ### In Progress 🔄
 
@@ -72,6 +84,7 @@
 - ⬜ **Beta subdomain setup** — Waiting for domain (beta.storyforge.id)
 - ⬜ **Supabase schema migration** — Ready, waiting for domain + email setup
 - ⬜ **Soft launch Week 8** — On track if domain done this week
+- ⬜ **Server-side guest rate limiting** — Recommended next hardening step
 
 ---
 
@@ -113,8 +126,8 @@
 
 | Component | Status | Notes |
 |---|---|---|
-| **Frontend** | ✅ Live | Next.js on Vercel, streaming UI working |
-| **API Route** | ✅ Live | `/api/analyze` with Anthropic claude-haiku-4-5 |
+| **Frontend** | ✅ Live | Next.js on Vercel, guest `/analyze` flow working |
+| **API Route** | ✅ Live | `/api/analyze` with Anthropic claude-haiku-4-5, validation, no-store |
 | **ZDR Header** | ✅ Configured | Privacy-preserving, no data retention |
 | **Supabase** | ⏳ Pending | Schema ready, waiting for go-live signal |
 | **Domain** | ⏳ Pending | storyforge.id available, need registration |
@@ -194,6 +207,6 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-04-05-API-Live|2026-04-05: API Live + Domain Secured]]
+**Session Log:** [[03-Sessions/2026-04-28-guest-mode-activation|2026-04-28: Guest Mode Activation]]
 
 **Auto-updated by Claude**
