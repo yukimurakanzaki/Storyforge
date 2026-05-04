@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { AnalysisResult, ChatMessage, QAAnswer } from '@/types'
+import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -79,7 +80,16 @@ interface RefineResponse {
 export async function POST(request: NextRequest) {
   // Auth guard: require session OR guest-mode header
   const isGuest = request.headers.get('x-guest-mode') === '1'
-  if (!isGuest) {
+  if (isGuest) {
+    const ip = getClientIp(request)
+    const { allowed } = checkGuestRateLimit(ip)
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', message: 'Batas analisis tercapai. Masuk untuk melanjutkan.' },
+        { status: 429 }
+      )
+    }
+  } else {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

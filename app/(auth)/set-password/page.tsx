@@ -20,8 +20,15 @@ export default function SetPasswordPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [sessionReady, setSessionReady] = useState<boolean | null>(null)
   const router = useRouter()
+  const [nextPath, setNextPath] = useState('/analyze')
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const next = params.get('next')
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      setNextPath(next)
+    }
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
@@ -54,7 +61,7 @@ export default function SetPasswordPage() {
       setStatus('error')
       setErrorMsg(error.message)
     } else {
-      router.push('/analyze')
+      router.push(nextPath)
     }
   }
 
@@ -126,6 +133,16 @@ export default function SetPasswordPage() {
           >
             {status === 'loading' ? 'Menyimpan...' : 'Simpan Password'}
           </button>
+
+          <p className="text-center text-xs text-gray-400">
+            Password bisa diatur nanti di pengaturan akun.{' '}
+            <a
+              href={nextPath}
+              className="text-teal-600 underline hover:text-teal-700"
+            >
+              Lewati untuk sekarang
+            </a>
+          </p>
         </form>
       </div>
     </div>

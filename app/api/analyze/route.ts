@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -93,8 +94,18 @@ Fokus pencarian gap pada:
 export async function POST(request: NextRequest) {
   const mode = request.headers.get('x-guest-mode') === '1' ? 'guest' : 'user'
 
-  // Require either a guest-mode header or an authenticated session
-  if (mode !== 'guest') {
+  if (mode === 'guest') {
+    // Server-side rate limit for unauthenticated (guest) requests
+    const ip = getClientIp(request)
+    const { allowed } = checkGuestRateLimit(ip)
+    if (!allowed) {
+      return jsonResponse(
+        { error: 'Rate limit exceeded', message: 'Batas analisis tercapai. Masuk untuk melanjutkan.', mode },
+        { status: 429, mode }
+      )
+    }
+  } else {
+    // Require a valid authenticated session for non-guest requests
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
