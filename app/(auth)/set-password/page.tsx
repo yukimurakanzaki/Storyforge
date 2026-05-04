@@ -70,7 +70,7 @@ export default function SetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <Link href="/" className="text-xl font-bold text-indigo-600">
+          <Link href="/" className="text-xl font-bold text-teal-600">
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Buat Password</h1>
@@ -91,7 +91,7 @@ export default function SetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min. 8 karakter"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
             <p className="mt-1 text-xs text-gray-400">
               Min. 8 karakter, 1 huruf kapital, 1 angka, 1 simbol
@@ -109,7 +109,7 @@ export default function SetPasswordPage() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Ulangi password"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
 
@@ -122,7 +122,7 @@ export default function SetPasswordPage() {
           <button
             type="submit"
             disabled={status === 'loading' || !password || !confirm}
-            className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === 'loading' ? 'Menyimpan...' : 'Simpan Password'}
           </button>

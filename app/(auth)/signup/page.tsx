@@ -15,7 +15,8 @@ export default function SignupPage() {
     setErrorMsg('')
 
     const supabase = createClient()
-    const redirectTo = new URL('/api/auth/callback', window.location.origin)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    const redirectTo = new URL('/api/auth/callback', siteUrl)
     redirectTo.searchParams.set('redirect', '/analyze')
 
     const { error } = await supabase.auth.signInWithOtp({
@@ -38,7 +39,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <Link href="/" className="text-xl font-bold text-indigo-600">
+          <Link href="/" className="text-xl font-bold text-teal-600">
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Buat Akun Baru</h1>
@@ -68,7 +69,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="kamu@email.com"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
 
@@ -81,7 +82,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={status === 'loading' || !email}
-              className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {status === 'loading' ? 'Mengirim...' : 'Kirim Magic Link'}
             </button>
@@ -90,7 +91,7 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Sudah punya akun?{' '}
-          <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-700">
+          <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">
             Masuk
           </Link>
         </p>

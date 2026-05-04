@@ -42,7 +42,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-indigo-600">
+          <Link href="/" className="text-lg font-bold text-teal-600">
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm text-gray-500">
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-400 mb-4">Belum ada riwayat analisis</p>
             <Link
               href="/analyze"
-              className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="inline-flex items-center rounded-lg bg-teal-600 px-4 py-2 min-h-[44px] text-sm font-semibold text-white hover:bg-teal-700"
             >
               Mulai Analisis
             </Link>
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
               <Link
                 key={item.id}
                 href={`/analyze/${item.id}`}
-                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/30"
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 min-h-[44px] shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50/30"
               >
                 <div className="flex-1 min-w-0 mr-4">
                   <p className="text-sm font-medium text-gray-800 truncate">

@@ -5,7 +5,7 @@ import { AuthNav } from '@/components/AuthNav'
 
 function IconDocument({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75-6.75a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clipRule="evenodd" />
       <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
     </svg>
@@ -14,7 +14,7 @@ function IconDocument({ className }: { className?: string }) {
 
 function IconSparkle({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
     </svg>
   )
@@ -22,7 +22,7 @@ function IconSparkle({ className }: { className?: string }) {
 
 function IconChart({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M2.25 13.5a8.25 8.25 0 0 1 8.25-8.25.75.75 0 0 1 .75.75v6.75H18a.75.75 0 0 1 .75.75 8.25 8.25 0 0 1-16.5 0Z" clipRule="evenodd" />
       <path fillRule="evenodd" d="M12.75 3a.75.75 0 0 1 .75-.75 8.25 8.25 0 0 1 8.25 8.25.75.75 0 0 1-.75.75h-7.5a.75.75 0 0 1-.75-.75V3Z" clipRule="evenodd" />
     </svg>
@@ -31,7 +31,7 @@ function IconChart({ className }: { className?: string }) {
 
 function IconChat({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 0 0 6 21.75a6.721 6.721 0 0 0 3.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 0 1-.814 1.686.75.75 0 0 0 .44 1.223Z" clipRule="evenodd" />
     </svg>
   )
@@ -39,7 +39,7 @@ function IconChat({ className }: { className?: string }) {
 
 function IconCode({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M14.447 3.026a.75.75 0 0 1 .527.921l-4.5 16.5a.75.75 0 0 1-1.448-.394l4.5-16.5a.75.75 0 0 1 .921-.527ZM16.72 6.22a.75.75 0 0 1 1.06 0l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 1 1-1.06-1.06L21.44 12l-4.72-4.72a.75.75 0 0 1 0-1.06Zm-9.44 0a.75.75 0 0 1 0 1.06L2.56 12l4.72 4.72a.75.75 0 1 1-1.06 1.06L.97 12.53a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
     </svg>
   )
@@ -47,7 +47,7 @@ function IconCode({ className }: { className?: string }) {
 
 function IconCheck({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
     </svg>
   )
@@ -55,7 +55,7 @@ function IconCheck({ className }: { className?: string }) {
 
 function IconArrow({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M12.97 3.97a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 0 1 0 1.06l-7.5 7.5a.75.75 0 1 1-1.06-1.06l6.22-6.22H3a.75.75 0 0 1 0-1.5h16.19l-6.22-6.22a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
     </svg>
   )
@@ -63,7 +63,7 @@ function IconArrow({ className }: { className?: string }) {
 
 function IconWarning({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
     </svg>
   )
@@ -71,7 +71,7 @@ function IconWarning({ className }: { className?: string }) {
 
 function IconUsers({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
     </svg>
   )
@@ -291,36 +291,36 @@ export default function LandingPage() {
             <p className="mt-3 text-gray-500 max-w-md mx-auto">Tidak perlu training, tidak perlu setup. Langsung analisis.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                step: '01',
-                icon: <IconDocument className="w-6 h-6 text-teal-600" />,
-                title: 'Paste BRD-mu',
-                desc: 'Copy-paste dari Notion, Google Docs, Confluence, atau dokumen apapun. Format bebas.',
-              },
-              {
-                step: '02',
-                icon: <IconSparkle className="w-6 h-6 text-teal-600" />,
-                title: 'AI Menganalisis',
-                desc: 'Dalam hitungan detik, AI menemukan gap, ketidaklengkapan, dan menghasilkan skor kesiapan.',
-              },
-              {
-                step: '03',
-                icon: <IconChat className="w-6 h-6 text-teal-600" />,
-                title: 'Kirim ke Stakeholder',
-                desc: 'Salin pertanyaan klarifikasi dan kirim ke stakeholder via Slack, email, atau Notion.',
-              },
-            ].map(({ step, icon, title, desc }) => (
-              <div key={step} className="relative bg-white rounded-2xl p-7 border border-teal-100 shadow-sm hover:shadow-md transition-shadow">
-                <span className="absolute top-5 right-5 text-4xl font-black text-teal-50 select-none">{step}</span>
-                <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center mb-4">
-                  {icon}
-                </div>
-                <h3 className="font-bold text-teal-900 text-lg mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+          <div className="grid md:grid-cols-5 gap-6">
+            {/* Step 1 — featured, spans 3 cols */}
+            <div className="md:col-span-3 relative bg-white rounded-2xl p-8 border border-teal-100 shadow-sm hover:shadow-md transition-shadow">
+              <span className="absolute top-6 right-6 text-7xl font-black text-teal-50 select-none leading-none">01</span>
+              <div className="w-14 h-14 rounded-2xl bg-teal-600 flex items-center justify-center mb-5">
+                <IconDocument className="w-7 h-7 text-white" />
               </div>
-            ))}
+              <h3 className="font-extrabold text-teal-900 text-xl mb-2">Paste BRD-mu</h3>
+              <p className="text-gray-500 leading-relaxed max-w-sm">Copy-paste dari Notion, Google Docs, Confluence, atau dokumen apapun. Format bebas — BRD, PRD, requirement spec, atau bahkan catatan kasar.</p>
+            </div>
+
+            {/* Steps 2 & 3 — compact, span 2 cols, stacked */}
+            <div className="md:col-span-2 flex flex-col gap-6">
+              <div className="relative flex-1 bg-teal-600 rounded-2xl p-6 text-white overflow-hidden">
+                <span className="absolute top-4 right-4 text-5xl font-black text-teal-500 select-none leading-none">02</span>
+                <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center mb-4">
+                  <IconSparkle className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-bold text-white text-base mb-1.5">AI Menganalisis</h3>
+                <p className="text-teal-200 text-sm leading-relaxed">Dalam hitungan detik, AI menemukan gap dan menghasilkan skor kesiapan.</p>
+              </div>
+              <div className="relative flex-1 bg-white rounded-2xl p-6 border border-teal-100 shadow-sm overflow-hidden">
+                <span className="absolute top-4 right-4 text-5xl font-black text-teal-50 select-none leading-none">03</span>
+                <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
+                  <IconChat className="w-5 h-5 text-orange-600" />
+                </div>
+                <h3 className="font-bold text-teal-900 text-base mb-1.5">Kirim ke Stakeholder</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">Salin pertanyaan klarifikasi dan kirim via Slack, email, atau Notion.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -410,7 +410,7 @@ export default function LandingPage() {
                   'Payment gateway mana yang akan digunakan? Apakah perlu support refund otomatis?',
                   'Bagaimana alur jika dokter membatalkan jadwal yang sudah dipesan pasien?',
                 ].map((q, i) => (
-                  <p key={i} className="text-sm text-gray-700 pl-3 border-l-2 border-teal-200">{q}</p>
+                  <p key={i} className="text-sm text-gray-700 pl-3 border-l border-teal-100">{q}</p>
                 ))}
               </div>
               <button className="mt-3 w-full rounded-lg border border-teal-200 text-teal-700 text-sm font-medium py-2 hover:bg-teal-50 transition-colors cursor-pointer">

@@ -39,7 +39,7 @@ function getReadinessStyle(score: number) {
 function AIAvatar() {
   return (
     <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0 mt-1">
-      <svg className="w-3.5 h-3.5 text-teal-600" fill="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5 text-teal-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5Z" clipRule="evenodd" />
       </svg>
     </div>
@@ -217,10 +217,9 @@ export function RefinementChat({
                   onKeyDown={handleKeyDown}
                   disabled={isInputDisabled || isRefining}
                   rows={1}
-                  style={{ maxHeight: '200px', overflowY: 'auto' }}
                   placeholder="Tambah konteks, jawab pertanyaan, atau iterasi... (Enter kirim · Shift+Enter baris baru)"
                   className={[
-                    'w-full resize-none rounded-xl border px-4 py-3 text-sm',
+                    'w-full resize-none rounded-xl border px-4 py-3 text-sm max-h-48 overflow-y-auto',
                     'placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors',
                     overLimit
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-300'
@@ -239,6 +238,7 @@ export function RefinementChat({
               <button
                 onClick={handleSend}
                 disabled={!canSend}
+                aria-label="Kirim pesan"
                 className="rounded-xl bg-teal-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 Kirim

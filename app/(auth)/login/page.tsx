@@ -36,7 +36,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-6 text-center">
-          <Link href="/" className="text-xl font-bold text-indigo-600">
+          <Link href="/" className="text-xl font-bold text-teal-600">
             StoryForge<span className="text-gray-800">.id</span>
           </Link>
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Masuk ke StoryForge</h1>
@@ -54,7 +54,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="kamu@email.com"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password kamu"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
           </div>
 
@@ -82,7 +82,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={status === 'loading' || !email || !password}
-            className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === 'loading' ? 'Masuk...' : 'Login'}
           </button>
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Belum punya akun?{' '}
-          <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-700">
+          <Link href="/signup" className="font-medium text-teal-600 hover:text-teal-700">
             Daftar
           </Link>
         </p>

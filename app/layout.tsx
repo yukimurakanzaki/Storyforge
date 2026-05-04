@@ -22,7 +22,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={plusJakarta.variable}>
-      <body className={`antialiased ${plusJakarta.className}`}>{children}</body>
+      <body className={`antialiased ${plusJakarta.className}`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:bg-teal-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+        >
+          Langsung ke konten
+        </a>
+        {children}
+      </body>
     </html>
   )
 }
