@@ -449,7 +449,7 @@ export default function AnalyzePage() {
       />
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 min-w-0 h-screen">
+      <div id="main-content" className="flex flex-col flex-1 min-w-0 h-screen">
 
         {/* Header */}
         <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">

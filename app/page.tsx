@@ -180,7 +180,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section className="pt-36 pb-20 px-4">
+      <section id="main-content" className="pt-36 pb-20 px-4">
         <div className="mx-auto max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
 
