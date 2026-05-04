@@ -43,15 +43,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
+  const result = body.result
   const { data, error } = await supabase
-    .from('analyze_sessions')
+    .from('analysis_results')
     .insert({
       user_id: user.id,
-      status: 'active',
-      requirement_context: body.brdText || null,
+      session_id: body.id,
+      brd_text: body.brdText || null,
+      gap_list: result?.gapList ?? [],
+      clarification_questions: result?.clarificationQuestions ?? [],
+      readiness_score: result?.readinessScore ?? 0,
+      readiness_label: result?.readinessLabel ?? 'Tidak Siap',
       messages: body.messages ?? [],
-      current_analysis: body.result ?? null,
-      artifact: body.requirements ?? null,
+      requirements: body.requirements ?? null,
+      status: body.hasGenerated ? 'done' : 'finalizing',
+      created_at: body.createdAt,
     })
     .select('id')
     .single()

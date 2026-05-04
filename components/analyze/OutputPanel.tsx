@@ -1,14 +1,16 @@
 'use client'
 
-import type { AnalysisResult, GapItem } from '@/types'
+import type { AnalysisResult } from '@/types'
 import { Badge } from '@/components/ui/Badge'
 import { READINESS_LABELS } from '@/lib/constants'
+import { GapItem as GapListItem } from '@/components/analyze/GapItem'
 
 interface OutputPanelProps {
   result?: AnalysisResult
   isLoading?: boolean
   onGenerate?: () => void
   isGenerating?: boolean
+  canSubmitFeedback?: boolean
 }
 
 function getReadinessColor(score: number): 'green' | 'yellow' | 'red' {
@@ -23,12 +25,6 @@ function getReadinessLabel(score: number): string {
     if (score >= t) return READINESS_LABELS[t].label
   }
   return READINESS_LABELS[0].label
-}
-
-function severityColor(severity: GapItem['severity']): 'red' | 'yellow' | 'gray' {
-  if (severity === 'high') return 'red'
-  if (severity === 'medium') return 'yellow'
-  return 'gray'
 }
 
 function LoadingSkeleton() {
@@ -51,6 +47,7 @@ export function OutputPanel({
   isLoading = false,
   onGenerate,
   isGenerating = false,
+  canSubmitFeedback = false,
 }: OutputPanelProps) {
   if (isLoading) {
     return (
@@ -76,12 +73,6 @@ export function OutputPanel({
 
   function handleGenerateClick() {
     if (!onGenerate) return
-    if (!isReadyToGenerate) {
-      const confirmed = window.confirm(
-        `Readiness score masih ${result!.readinessScore}/100. Generate user stories sekarang?`
-      )
-      if (!confirmed) return
-    }
     onGenerate()
   }
 
@@ -110,16 +101,13 @@ export function OutputPanel({
           </h3>
           <ul className="flex flex-col gap-3">
             {result.gapList.map((gap, idx) => (
-              <li
+              <GapListItem
                 key={idx}
-                className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
-              >
-                <div className="mb-1 flex items-center gap-2">
-                  <Badge label={gap.severity} color={severityColor(gap.severity)} />
-                  <span className="text-xs font-medium text-gray-500">{gap.category}</span>
-                </div>
-                <p className="text-sm text-gray-700">{gap.description}</p>
-              </li>
+                gap={gap}
+                index={idx}
+                analysisId={result.id}
+                canSubmitFeedback={canSubmitFeedback}
+              />
             ))}
           </ul>
         </section>

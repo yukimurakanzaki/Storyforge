@@ -1,20 +1,26 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { AnalysisResult, ChatMessage } from '@/types'
 
 export const runtime = 'nodejs'
+
+const MAX_BRD_CHARS = 150_000
+const MAX_MESSAGES = 30
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const SYSTEM_PROMPT = `Kamu adalah senior product analyst yang mengubah BRD dan hasil klarifikasi menjadi User Stories siap pakai.
 
 INSTRUKSI:
-- Hasilkan maksimal 6 User Stories yang paling penting berdasarkan BRD dan diskusi
+- Hasilkan maksimal 4 User Stories yang paling penting berdasarkan BRD dan diskusi
 - Setiap story harus INVEST: Independent, Negotiable, Valuable, Estimable, Small, Testable
-- Setiap story memiliki 1-3 Gherkin scenarios (Given/When/Then)
+- Setiap INVEST note: MAKSIMAL 1 kalimat singkat
+- Setiap story memiliki 1-2 Gherkin scenarios (Given/When/Then) — tidak lebih
+- Setiap Given/When/Then: maksimal 2 item per array
 - Field Context Table hanya diisi jika story melibatkan form input / field data — jika tidak ada form, omit fieldContextTable
 - Gunakan Bahasa Indonesia untuk semua teks
-- Kembalikan JSON valid tanpa markdown
+- Kembalikan JSON valid tanpa markdown — JANGAN potong output di tengah
 
 FORMAT JSON WAJIB:
 {
@@ -25,19 +31,19 @@ FORMAT JSON WAJIB:
       "iWant": "string — aksi yang diinginkan",
       "soThat": "string — manfaat yang didapat",
       "investNotes": {
-        "independent": "string — kenapa story ini tidak bergantung pada story lain",
-        "negotiable": "string — aspek apa yang bisa dinegosiasi",
-        "valuable": "string — nilai bisnis yang dihasilkan",
-        "estimable": "string — estimasi kasar effort",
-        "small": "string — kenapa cukup kecil untuk satu sprint",
-        "testable": "string — bagaimana story ini diuji"
+        "independent": "string",
+        "negotiable": "string",
+        "valuable": "string",
+        "estimable": "string",
+        "small": "string",
+        "testable": "string"
       },
       "acceptanceCriteria": [
         {
           "title": "string — nama skenario",
-          "given": ["string — kondisi awal"],
-          "when": ["string — aksi yang dilakukan"],
-          "then": ["string — hasil yang diharapkan"]
+          "given": ["string"],
+          "when": ["string"],
+          "then": ["string"]
         }
       ],
       "fieldContextTable": [
@@ -54,34 +60,62 @@ FORMAT JSON WAJIB:
 }`
 
 export async function POST(request: NextRequest) {
-  const {
-    brdText,
-    initialAnalysis,
-    messages,
-  }: {
-    brdText: string
-    initialAnalysis: AnalysisResult
-    messages: ChatMessage[]
-  } = await request.json()
-
-  if (!brdText || !initialAnalysis || !messages) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  // Auth guard: require session OR guest-mode header
+  const isGuest = request.headers.get('x-guest-mode') === '1'
+  if (!isGuest) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
-  const gapSummary = initialAnalysis.gapList
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const { brdText, initialAnalysis, messages } = body as {
+    brdText?: unknown
+    initialAnalysis?: unknown
+    messages?: unknown
+  }
+
+  if (typeof brdText !== 'string' || !brdText.trim()) {
+    return NextResponse.json({ error: 'Missing brdText' }, { status: 400 })
+  }
+  if (brdText.length > MAX_BRD_CHARS) {
+    return NextResponse.json({ error: 'BRD text too large' }, { status: 413 })
+  }
+  if (!initialAnalysis || typeof initialAnalysis !== 'object') {
+    return NextResponse.json({ error: 'Missing initialAnalysis' }, { status: 400 })
+  }
+  if (!Array.isArray(messages)) {
+    return NextResponse.json({ error: 'Missing messages' }, { status: 400 })
+  }
+  if ((messages as unknown[]).length > MAX_MESSAGES) {
+    return NextResponse.json({ error: 'Too many messages' }, { status: 400 })
+  }
+
+  const typedAnalysis = initialAnalysis as AnalysisResult
+  const typedMessages = messages as ChatMessage[]
+
+  const gapSummary = typedAnalysis.gapList
     .map((g) => `  - [${g.severity.toUpperCase()}] ${g.category}: ${g.description}`)
     .join('\n')
 
-  const conversationHistory = messages
+  const conversationHistory = typedMessages
     .map((m) => `${m.role === 'user' ? 'PM' : 'Analis'}: ${m.content}`)
     .join('\n\n')
 
-  const userMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS:\n- Readiness Score: ${initialAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nDISKUSI KLARIFIKASI:\n${conversationHistory}\n\nBuat User Stories lengkap berdasarkan semua konteks di atas. Sertakan generatedAt dengan timestamp sekarang dalam ISO 8601.`
+  const userMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS:\n- Readiness Score: ${typedAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nDISKUSI KLARIFIKASI:\n${conversationHistory}\n\nBuat User Stories lengkap berdasarkan semua konteks di atas. Sertakan generatedAt dengan timestamp sekarang dalam ISO 8601.`
 
   try {
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8000,
+      max_tokens: 8192,
       temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
@@ -97,7 +131,14 @@ export async function POST(request: NextRequest) {
       .replace(/\s*```$/, '')
       .trim()
 
-    const parsed = JSON.parse(cleaned)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch {
+      console.error('[api/requirements] JSON parse failed, raw:', cleaned.slice(0, 200))
+      return NextResponse.json({ error: 'AI response unreadable. Coba lagi.' }, { status: 422 })
+    }
+
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('[api/requirements] error:', err)

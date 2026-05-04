@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
@@ -44,7 +45,7 @@ function jsonResponse(
   })
 }
 
-const SYSTEM_PROMPT = `Kamu adalah analis BRD (Business Requirements Document) berpengalaman untuk Product Manager di Indonesia.
+export const SYSTEM_PROMPT = `Kamu adalah analis BRD (Business Requirements Document) berpengalaman untuk Product Manager di Indonesia.
 
 Analisis BRD yang diberikan dan kembalikan hasil dalam format JSON valid — tanpa markdown, tanpa code block, langsung JSON saja.
 
@@ -54,7 +55,9 @@ Format output (ikuti persis):
     {
       "category": "<kategori, contoh: Edge Case | Non-Functional Requirement | Role Definition | Acceptance Criteria | Dependency>",
       "description": "<deskripsi gap dalam Bahasa Indonesia, 1-2 kalimat>",
-      "severity": "<high | medium | low>"
+      "severity": "<high | medium | low>",
+      "confidence": "<high | medium | low>",
+      "reference": "<kutipan pendek atau nama bagian dari BRD yang menjadi dasar analisis, atau null>"
     }
   ],
   "clarificationQuestions": [
@@ -68,6 +71,11 @@ BATAS OUTPUT KETAT:
 - Maksimal 10 gap paling kritis (prioritaskan high severity)
 - Maksimal 5 clarification questions (yang paling penting)
 - Deskripsi gap: 1 kalimat singkat, padat
+- Untuk setiap gap, confidence wajib diisi:
+  - "high": gap explicitly missing, tidak ada di BRD sama sekali
+  - "medium": gap ambiguous, ada indikasi tetapi tidak jelas
+  - "low": gap mungkin ada tetapi tersirat/tersembunyi di bagian lain
+- Reference wajib berbasis isi BRD. Jika ada bagian/kutipan yang jelas, pakai kutipan pendek atau nama bagian. Jika tidak ada kutipan atau bagian yang jelas, isi reference dengan null
 
 Panduan penilaian readinessScore:
 - 80-100: BRD lengkap, minim gap, siap dikerjakan engineering
@@ -84,6 +92,18 @@ Fokus pencarian gap pada:
 
 export async function POST(request: NextRequest) {
   const mode = request.headers.get('x-guest-mode') === '1' ? 'guest' : 'user'
+
+  // Require either a guest-mode header or an authenticated session
+  if (mode !== 'guest') {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return jsonResponse(
+        { error: 'Unauthorized', message: 'Login diperlukan.', mode },
+        { status: 401, mode }
+      )
+    }
+  }
 
   let body: unknown
   try {

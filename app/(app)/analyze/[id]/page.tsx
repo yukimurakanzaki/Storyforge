@@ -23,16 +23,8 @@ export default async function AnalysisDetailPage({ params }: Props) {
   const analysis = await getAnalysisById(supabase, id, user.id)
   if (!analysis) notFound()
 
-  // Get subscription for Pro badge
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('plan')
-    .eq('user_id', user.id)
-    .single()
-
-  const isPro = sub?.plan === 'pro'
-
   const result = {
+    id: analysis.id,
     gapList: analysis.gap_list,
     clarificationQuestions: analysis.clarification_questions,
     readinessScore: analysis.readiness_score,
@@ -78,7 +70,7 @@ export default async function AnalysisDetailPage({ params }: Props) {
           <p className="mt-1 text-sm text-gray-400">{date}</p>
         </div>
 
-        <OutputPanel result={result} />
+        <OutputPanel result={result} canSubmitFeedback />
 
         {/* BRD Text preview */}
         <details className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm">

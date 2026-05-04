@@ -16,11 +16,14 @@ export default function SignupPage() {
 
     const supabase = createClient()
     const redirectTo = new URL('/api/auth/callback', window.location.origin)
-    redirectTo.searchParams.set('type', 'signup')
+    redirectTo.searchParams.set('redirect', '/analyze')
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo.toString() },
+      options: {
+        emailRedirectTo: redirectTo.toString(),
+        shouldCreateUser: true,
+      },
     })
 
     if (error) {

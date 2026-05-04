@@ -11,6 +11,8 @@ test('user can navigate to analyze page and see mocked analysis results', async 
             category: 'Acceptance Criteria',
             description: 'Kriteria sukses checkout belum terukur.',
             severity: 'high',
+            confidence: 'high',
+            reference: 'BRD menyebut checkout, tetapi tidak ada ukuran sukses.',
           },
         ],
         clarificationQuestions: [
@@ -33,9 +35,11 @@ test('user can navigate to analyze page and see mocked analysis results', async 
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
   await page.getByRole('button', { name: /Analyze BRD/i }).click()
 
-  await expect(page.getByText('Kesiapan BRD')).toBeVisible()
-  await expect(page.getByText('72%')).toBeVisible()
+  await expect(page.getByText('72')).toBeVisible()
+  await expect(page.getByText('/100')).toBeVisible()
   await expect(page.getByText('Perlu Klarifikasi', { exact: true })).toBeVisible()
+  await expect(page.getByText('Bukti kuat', { exact: true })).toBeVisible()
+  await expect(page.getByText('BRD menyebut checkout, tetapi tidak ada ukuran sukses.')).toBeVisible()
   await expect(
     page.getByText('Bagaimana sistem menangani pembayaran yang gagal?', { exact: true }),
   ).toBeVisible()
@@ -75,7 +79,7 @@ test('user can refine and generate requirements from mocked API', async ({ page 
           gapList: [],
           clarificationQuestions: [],
           readinessScore: 82,
-          readinessLabel: 'BRD Lengkap',
+          readinessLabel: 'Siap',
         },
       }),
     })
@@ -128,13 +132,13 @@ test('user can refine and generate requirements from mocked API', async ({ page 
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
   await page.getByRole('button', { name: /Analyze BRD/i }).click()
 
-  await page.getByPlaceholder(/Tambah konteks atau jawab pertanyaan/i).fill(
+  await page.getByPlaceholder(/Tambah konteks.*jawab pertanyaan/i).fill(
     'Refund hanya bisa disetujui oleh finance lead setelah nominal diverifikasi.',
   )
   await page.getByRole('button', { name: /^Kirim$/i }).click()
 
   await expect(page.getByText(/requirements siap digenerate/i)).toBeVisible()
-  await expect(page.getByText('82%')).toBeVisible()
+  await expect(page.getByText('82')).toBeVisible()
 
   await page.getByRole('button', { name: /Generate User Stories/i }).click()
 
@@ -181,7 +185,7 @@ test('user sees a helpful error when refinement fails', async ({ page }) => {
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
   await page.getByRole('button', { name: /Analyze BRD/i }).click()
 
-  await page.getByPlaceholder(/Tambah konteks atau jawab pertanyaan/i).fill(
+  await page.getByPlaceholder(/Tambah konteks.*jawab pertanyaan/i).fill(
     'Kami akan memakai Xendit untuk pembayaran kartu dan virtual account.',
   )
   await page.getByRole('button', { name: /^Kirim$/i }).click()

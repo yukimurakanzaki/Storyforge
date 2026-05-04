@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-04-28 (WIB)
-**Status:** Pre-MVP, bounded guest mode built, validation green
+**Last Updated:** 2026-05-01 (WIB)
+**Status:** Pre-MVP, Output Trust Layer built and verified locally
 
 ---
 
@@ -20,6 +20,9 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-05-01-output-trust-layer|2026-05-01: Output Trust Layer]] - **LATEST**
+- [[03-Sessions/2026-04-29-auth-magic-link-fix|2026-04-29: Auth Magic Link Fix]] — **LATEST**
+- [[03-Sessions/2026-04-29-session-saved-after-guest-mode-push|2026-04-29: Session Saved After Guest Mode Push]] — **LATEST**
 - [[03-Sessions/2026-04-28-guest-mode-activation|2026-04-28: Guest Mode Activation]] — **LATEST**
 - [[03-Sessions/2026-04-23-playwright-e2e-error-path-added|2026-04-23: Playwright E2E Error Path Added]] — **LATEST**
 - [[03-Sessions/2026-04-23-playwright-e2e-expanded|2026-04-23: Playwright E2E Expanded]]
@@ -53,7 +56,7 @@
 
 ---
 
-## ✅ Latest Status — 2026-04-28
+## ✅ Latest Status — 2026-05-01
 
 ### Completed ✅
 
@@ -70,13 +73,19 @@
 - ✅ **Guest mode activation built** — `/analyze` is public, guests have local quota, and account-gated persistence remains protected
 - ✅ **Analyze API hardened** — request validation, `no-store`, and mode headers added
 - ✅ **Validation pass green** — `npm test`, Playwright E2E, TypeScript, and production build pass
+- ✅ **Guest mode pushed to main** — Commit `249e2ea feat: add bounded guest analysis mode` is on `origin/main`
+- ✅ **Magic-link auth flow fixed** — Signup magic link now redirects to `/analyze` after Supabase session exchange, with redirect regression tests added
+- ✅ **Output Trust Layer built** — Gap confidence badges, reference text, flag feedback modal, `/api/feedback`, and Supabase migration added
+- ✅ **Trust layer validation green** — `npm test`, TypeScript, production build, and Playwright E2E all pass
 
 ### In Progress 🔄
 
+- 🔄 **Supabase migration for trust layer** — Run `005_output_trust_layer.sql` before production feedback capture
 - 🔄 **Register domain storyforge.id** — Next action
 - 🔄 **Setup email forwarding** — privacy@storyforge.id, hello@storyforge.id (via Cloudflare)
 - 🔄 **Message William** — Share beta link, reactivate commitment
 - 🔄 **Compliance pages** — Publish /privacy, /terms on domain
+- 🔄 **Supabase redirect allowlist** — Add deployed `/api/auth/callback` URL before real-user magic-link testing
 
 ### Blocked ⬜
 
@@ -207,6 +216,6 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-04-28-guest-mode-activation|2026-04-28: Guest Mode Activation]]
+**Session Log:** [[03-Sessions/2026-04-29-session-saved-after-guest-mode-push|2026-04-29: Session Saved After Guest Mode Push]]
 
 **Auto-updated by Claude**

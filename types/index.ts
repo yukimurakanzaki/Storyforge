@@ -1,12 +1,16 @@
 export type GapSeverity = 'high' | 'medium' | 'low'
+export type GapConfidence = 'high' | 'medium' | 'low'
 
 export interface GapItem {
   category: string
   description: string
   severity: GapSeverity
+  confidence?: GapConfidence
+  reference?: string | null
 }
 
 export interface AnalysisResult {
+  id?: string
   gapList: GapItem[]
   clarificationQuestions: string[]
   readinessScore: number

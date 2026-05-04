@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { BRDInput } from '@/components/analyze/BRDInput'
-import { OutputPanel } from '@/components/analyze/OutputPanel'
 import { RefinementChat } from '@/components/analyze/RefinementChat'
-import { QACards } from '@/components/analyze/QACards'
-import { RequirementsPanel } from '@/components/analyze/RequirementsPanel'
 import { SAMPLE_BRD } from '@/lib/constants'
 import type {
   AnalysisResult,
@@ -37,20 +34,24 @@ interface RefineAPIResponse {
   analysis: Omit<AnalysisResult, 'sessionId' | 'createdAt'> | null
 }
 
-function summarizeBrd(text: string): string {
-  const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
-  const paragraphs = text.trim().split(/\n\n+/).filter(Boolean).length
-  return `${paragraphs} paragraf · ${words.toLocaleString('id-ID')} kata`
-}
-
 function buildFirstAssistantMessage(analysis: AnalysisResult): string {
   if (analysis.clarificationQuestions.length === 0) {
-    return 'Analisis BRD selesai. Readiness score cukup tinggi. Klik "Generate User Stories" di panel kanan jika kamu sudah siap.'
+    return 'Analisis selesai. Readiness score sudah cukup tinggi — klik "Generate User Stories" saat siap.'
   }
-  const numbered = analysis.clarificationQuestions
-    .map((q, i) => `${i + 1}. ${q}`)
-    .join('\n')
-  return `Berdasarkan analisis BRD kamu, ada beberapa hal yang perlu klarifikasi:\n\n${numbered}\n\nJawab melalui kartu Q&A di bawah atau ketik langsung di chat.`
+  return `Ditemukan ${analysis.gapList.length} gap dan ${analysis.clarificationQuestions.length} pertanyaan klarifikasi. Jawab pertanyaan di atas atau ketik langsung di sini untuk iterasi.`
+}
+
+function AnalyzingState() {
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20">
+      <div
+        className="w-10 h-10 rounded-full border-teal-200 border-t-teal-600 animate-spin"
+        style={{ borderWidth: 3, borderStyle: 'solid' }}
+      />
+      <p className="text-sm text-gray-500 font-medium">Menganalisis BRD...</p>
+      <p className="text-xs text-gray-400">Biasanya selesai dalam 15–30 detik</p>
+    </div>
+  )
 }
 
 function buildQASubmissionMessage(
@@ -77,7 +78,6 @@ export default function AnalyzePage() {
   const [isRefining, setIsRefining] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
-  const [showBrdEdit, setShowBrdEdit] = useState(false)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [guestUsage, setGuestUsage] = useState<{ count: number; limit: number }>({
@@ -141,7 +141,6 @@ export default function AnalyzePage() {
     setRequirements(null)
     setError(undefined)
     setShowAccountPrompt(false)
-    setShowBrdEdit(false)
     isFinalizingRef.current = false
   }
 
@@ -193,11 +192,36 @@ export default function AnalyzePage() {
         content: buildFirstAssistantMessage(analysisResult),
       }
 
+      let savedAnalysisId: string | undefined
+      if (isAuthenticated) {
+        const saveRes = await fetch('/api/save-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: analysisResult.sessionId,
+            brdText: text,
+            initialAnalysis: analysisResult,
+            messages: [firstMsg],
+          }),
+        })
+        if (saveRes.ok) {
+          const saved = await saveRes.json().catch(() => ({}))
+          savedAnalysisId = saved.analysisId
+        } else {
+          console.error('[analyze] initial save failed:', await saveRes.text())
+        }
+      }
+
+      const storedAnalysisResult: AnalysisResult = {
+        ...analysisResult,
+        id: savedAnalysisId,
+      }
+
       setBrdText(text)
-      setResult(analysisResult)
+      setResult(storedAnalysisResult)
       setMessages([firstMsg])
       setPhase('refining')
-      persistAnalysisState(text, [firstMsg], analysisResult)
+      persistAnalysisState(text, [firstMsg], storedAnalysisResult)
       if (!isAuthenticated) {
         setGuestUsage(incrementGuestUsage())
       }
@@ -218,7 +242,10 @@ export default function AnalyzePage() {
     try {
       const res = await fetch('/api/refine', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
+        },
         body: JSON.stringify({
           brdText: currentBrdText,
           initialAnalysis: currentResult,
@@ -247,6 +274,8 @@ export default function AnalyzePage() {
           ...parsed.analysis,
         }
         setResult(updatedResult)
+        setQaAnswers([])
+        setResolvedIndices([])
         persistAnalysisState(currentBrdText, updatedMessages, updatedResult)
       } else {
         persistAnalysisState(currentBrdText, updatedMessages, currentResult)
@@ -356,7 +385,10 @@ export default function AnalyzePage() {
     try {
       const res = await fetch('/api/requirements', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
+        },
         body: JSON.stringify({
           brdText,
           initialAnalysis: result,
@@ -403,190 +435,134 @@ export default function AnalyzePage() {
   const isPostAnalysis = phase === 'refining' || phase === 'finalizing' || phase === 'done'
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex h-screen overflow-hidden bg-white">
+
+      {/* Dark sidebar */}
       <SessionSidebar
         isAuthenticated={isAuthenticated}
         onNewSession={handleNewSession}
       />
 
-      <div className="flex-1 min-w-0">
-      <header className="border-b border-gray-200 bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-indigo-600">
-            StoryForge<span className="text-gray-800">.id</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-gray-500">
-            {isAuthenticated && (
-              <Link href="/dashboard" className="hover:text-gray-800 transition-colors">
+      {/* Main content */}
+      <div className="flex flex-col flex-1 min-w-0 h-screen">
+
+        {/* Header */}
+        <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors">
+              StoryForge<span className="text-teal-500">.id</span>
+            </Link>
+            {isPostAnalysis && result && (
+              <>
+                <span className="text-gray-300 select-none">/</span>
+                <span className="text-gray-400 truncate max-w-[200px] text-xs">
+                  {brdText.split('\n')[0].replace(/^#+\s*/, '').slice(0, 50) || 'Analisis BRD'}
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {!isAuthenticated && (
+              <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-2.5 py-1 border border-gray-200">
+                Guest {guestUsage.count}/{guestUsage.limit}
+              </span>
+            )}
+            {isAuthenticated ? (
+              <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
                 Dashboard
               </Link>
-            )}
-            {!isAuthenticated && (
-              <Link href="/login" className="hover:text-gray-800 transition-colors">
-                Login
+            ) : (
+              <Link href="/login" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+                Masuk
               </Link>
             )}
-          </nav>
-        </div>
-      </header>
+          </div>
+        </header>
 
-      {showAccountPrompt && (
-        <div className="bg-indigo-600 px-4 py-3 text-sm text-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <span>
-              Simpan hasil analisis ini — buat akun gratis untuk menyimpan sesi dan mulai analisis baru kapan saja.
-            </span>
+        {/* Account prompt */}
+        {showAccountPrompt && (
+          <div className="flex-shrink-0 bg-teal-600 px-5 py-2.5 text-sm text-white flex items-center justify-between gap-4">
+            <span>Simpan hasil analisis — buat akun gratis untuk menyimpan sesi dan melanjutkan kapan saja.</span>
             <div className="flex shrink-0 items-center gap-3">
               <Link
                 href="/register"
-                className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50 transition-colors"
               >
                 Daftar Gratis
               </Link>
               <button
                 onClick={() => setShowAccountPrompt(false)}
-                className="text-indigo-200 hover:text-white text-xs"
+                className="text-teal-200 hover:text-white text-xs cursor-pointer"
               >
-                Nanti saja
+                Nanti
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Analisis BRD</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {isPostAnalysis
-                  ? 'Jawab pertanyaan klarifikasi atau chat langsung. Generate user stories saat BRD sudah cukup jelas.'
-                  : 'Paste BRD kamu di bawah dan klik Analyze untuk mendapatkan laporan kesiapan.'}
-              </p>
-            </div>
-            {!isAuthenticated && (
-              <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
-                Guest: {guestUsage.count}/{guestUsage.limit} analisis gratis
-              </div>
-            )}
-          </div>
-        </div>
-
+        {/* Error banner */}
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+          <div className="flex-shrink-0 bg-red-50 border-b border-red-100 px-5 py-2.5 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(undefined)} className="text-red-400 hover:text-red-600 cursor-pointer ml-4 leading-none text-base">×</button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Left col */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            {!isPostAnalysis ? (
-              <BRDInput
-                value={brdText}
-                onChange={setBrdText}
-                onAnalyze={handleAnalyze}
-                onSample={() => setBrdText(SAMPLE_BRD)}
-                isLoading={phase === 'analyzing'}
-              />
-            ) : (
-              <div className="flex flex-col gap-4">
-                {/* BRD summary + edit toggle */}
-                <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">BRD yang dianalisis</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-gray-600">
-                      {summarizeBrd(brdText)}
-                    </span>
-                    <button
-                      onClick={() => setShowBrdEdit((v) => !v)}
-                      className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                      title={showBrdEdit ? 'Sembunyikan teks BRD' : 'Edit teks BRD'}
-                    >
-                      <span
-                        className={[
-                          'inline-flex w-8 h-4 rounded-full transition-colors duration-200 relative',
-                          showBrdEdit ? 'bg-indigo-600' : 'bg-gray-300',
-                        ].join(' ')}
-                      >
-                        <span
-                          className={[
-                            'inline-block w-3 h-3 bg-white rounded-full shadow absolute top-0.5 transition-transform duration-200',
-                            showBrdEdit ? 'translate-x-4' : 'translate-x-0.5',
-                          ].join(' ')}
-                        />
-                      </span>
-                      Edit BRD
-                    </button>
-                  </div>
+        {/* Main area */}
+        <div className="flex flex-col flex-1 min-h-0">
+          {phase === 'input' ? (
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-3xl mx-auto px-6 py-10">
+                <div className="mb-8">
+                  <h1 className="text-2xl font-extrabold text-gray-900">Analisis BRD</h1>
+                  <p className="mt-1.5 text-sm text-gray-500">
+                    Paste BRD kamu dan dapatkan gap analysis, readiness score, serta pertanyaan klarifikasi dalam hitungan detik.
+                  </p>
                 </div>
-
-                {/* Collapsible BRD edit */}
-                {showBrdEdit && (
-                  <div className="flex flex-col gap-2">
-                    <textarea
-                      value={brdText}
-                      onChange={(e) => setBrdText(e.target.value)}
-                      rows={8}
-                      className="w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                    <p className="text-xs text-gray-400">Edit BRD lalu klik &ldquo;Analisis Ulang&rdquo; di bawah untuk memperbarui gap analysis.</p>
-                  </div>
-                )}
-
-                {/* Q&A Cards */}
-                {result && result.clarificationQuestions.length > 0 && (
-                  <QACards
-                    questions={result.clarificationQuestions}
-                    qaAnswers={qaAnswers}
-                    resolvedIndices={resolvedIndices}
-                    isLoading={isRefining}
-                    onAnswerChange={handleQAAnswerChange}
-                    onOutOfScopeChange={handleQAOutOfScopeChange}
-                    onSubmit={handleSubmitQA}
-                  />
-                )}
-
-                <RefinementChat
-                  messages={messages}
-                  onSend={handleSendMessage}
-                  onReanalyze={handleReanalyze}
-                  isLoading={isRefining}
-                  disabled={phase === 'finalizing' || phase === 'done'}
+                <BRDInput
+                  value={brdText}
+                  onChange={setBrdText}
+                  onAnalyze={handleAnalyze}
+                  onSample={() => setBrdText(SAMPLE_BRD)}
+                  isLoading={false}
                 />
               </div>
-            )}
-          </div>
-
-          {/* Right col */}
-          {phase === 'done' ? (
-            <RequirementsPanel
+            </div>
+          ) : phase === 'analyzing' ? (
+            <AnalyzingState />
+          ) : (
+            <RefinementChat
+              messages={messages}
+              result={result}
               requirements={requirements}
-              isLoading={isFinalizing}
-              onRetry={() => {
+              qaAnswers={qaAnswers}
+              resolvedIndices={resolvedIndices}
+              isRefining={isRefining}
+              isFinalizing={isFinalizing}
+              phase={phase}
+              onSend={handleSendMessage}
+              onReanalyze={handleReanalyze}
+              onSubmitQA={handleSubmitQA}
+              onQAAnswerChange={handleQAAnswerChange}
+              onQAOutOfScopeChange={handleQAOutOfScopeChange}
+              onGenerate={isPostAnalysis ? handleFinalize : undefined}
+              onRequirementsRetry={() => {
                 setPhase('refining')
                 setRequirements(null)
                 setIsFinalizing(false)
               }}
-              onRegenerate={() => {
+              onRequirementsRegenerate={() => {
                 setRequirements(null)
                 setIsFinalizing(false)
                 isFinalizingRef.current = false
                 handleFinalize()
               }}
-            />
-          ) : (
-            <OutputPanel
-              result={result}
-              isLoading={phase === 'analyzing'}
-              onGenerate={isPostAnalysis ? handleFinalize : undefined}
-              isGenerating={isFinalizing}
+              canSubmitFeedback={isAuthenticated && !!result?.id}
             />
           )}
         </div>
-      </main>
-    </div>
+      </div>
     </div>
   )
 }

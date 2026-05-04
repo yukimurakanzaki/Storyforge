@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateAnalyzePayload } from '@/app/api/analyze/route'
+import { SYSTEM_PROMPT, validateAnalyzePayload } from '@/app/api/analyze/route'
 
 describe('validateAnalyzePayload', () => {
   it('rejects missing body', () => {
@@ -31,5 +31,11 @@ describe('validateAnalyzePayload', () => {
       valid: true,
       text: 'Valid BRD',
     })
+  })
+
+  it('requires confidence and reference metadata for each gap', () => {
+    expect(SYSTEM_PROMPT).toContain('"confidence": "<high | medium | low>"')
+    expect(SYSTEM_PROMPT).toContain('"reference"')
+    expect(SYSTEM_PROMPT).toContain('Jika tidak ada kutipan atau bagian yang jelas, isi reference dengan null')
   })
 })

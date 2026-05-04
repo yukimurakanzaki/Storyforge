@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { sanitizeAuthRedirectPath } from '@/lib/auth/redirect'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -11,13 +12,6 @@ export default function LoginPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const router = useRouter()
-
-  function sanitizeRedirectPath(input: string | null): string {
-    if (!input) return '/analyze'
-    if (!input.startsWith('/')) return '/analyze'
-    if (input.startsWith('//')) return '/analyze'
-    return input
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,7 +26,7 @@ export default function LoginPage() {
       setErrorMsg('Email atau password salah.')
     } else {
       const params = new URLSearchParams(window.location.search)
-      const redirectPath = sanitizeRedirectPath(params.get('redirect'))
+      const redirectPath = sanitizeAuthRedirectPath(params.get('redirect'))
       router.push(redirectPath)
       router.refresh()
     }
