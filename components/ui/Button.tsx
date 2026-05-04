@@ -38,6 +38,7 @@ export function Button({
     >
       {loading && (
         <svg
+          aria-hidden="true"
           className="-ml-1 mr-2 h-4 w-4 animate-spin"
           fill="none"
           viewBox="0 0 24 24"
