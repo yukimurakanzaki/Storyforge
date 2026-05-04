@@ -43,8 +43,13 @@ function buildFirstAssistantMessage(analysis: AnalysisResult): string {
 
 function AnalyzingState() {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20">
+    <div
+      role="status"
+      aria-label="Menganalisis BRD"
+      className="flex flex-col items-center justify-center flex-1 gap-4 py-20"
+    >
       <div
+        aria-hidden="true"
         className="w-10 h-10 rounded-full border-teal-200 border-t-teal-600 animate-spin"
         style={{ borderWidth: 3, borderStyle: 'solid' }}
       />
