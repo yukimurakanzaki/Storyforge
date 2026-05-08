@@ -92,3 +92,50 @@ export interface TempSession {
   hasGenerated: boolean
   qaAnswers: QAAnswer[]
 }
+
+export type ProjectContext = {
+  business: {
+    description: string
+    target_users: string[]
+    domain: string
+    compliance: string[]
+    naming_conventions: Record<string, string>
+    past_decisions: string[]
+  }
+  technical: {
+    frontend: string
+    backend: string
+    existing_systems: string[]
+    integrations: string[]
+    constraints: string[]
+    tech_debt: string[]
+  }
+}
+
+export type Project = {
+  id: string
+  user_id: string
+  name: string
+  context: ProjectContext
+  design_md: string | null
+  design_md_source: 'uploaded' | 'generated' | null
+  created_at: string
+}
+
+export type SectionStatus = 'empty' | 'generating' | 'done' | 'stale'
+
+export type SectionName =
+  | 'foundation'
+  | 'roles'
+  | 'flow'
+  | 'engineer'
+  | 'designer'
+  | 'qa'
+  | 'templates'
+  | 'stakeholder'
+
+export type SectionStates = Record<SectionName, SectionStatus>
+
+export type SectionBlobs = Partial<Record<SectionName, unknown>>
+
+export type SessionState = 'refining' | 'ready' | 'done'
