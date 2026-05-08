@@ -6,4 +6,7 @@
   .text-balance {
     text-wrap: balance;
   }
+  .input-base {
+    @apply w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-600 resize-none;
+  }
 }
