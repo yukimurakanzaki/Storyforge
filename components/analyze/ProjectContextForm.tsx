@@ -40,10 +40,12 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
   const [ctx, setCtx] = useState<ProjectContext>(initial ?? DEFAULT_CONTEXT)
   const [saving, setSaving] = useState(false)
 
-  const setB = (key: keyof ProjectContext['business'], value: string) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setB = (key: keyof ProjectContext['business'], value: any) =>
     setCtx(c => ({ ...c, business: { ...c.business, [key]: value } }))
 
-  const setT = (key: keyof ProjectContext['technical'], value: string) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setT = (key: keyof ProjectContext['technical'], value: any) =>
     setCtx(c => ({ ...c, technical: { ...c.technical, [key]: value } }))
 
   const handleSave = async () => {
