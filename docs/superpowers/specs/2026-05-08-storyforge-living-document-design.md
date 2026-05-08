@@ -16,20 +16,52 @@ The workflow mirrors how a PM actually works in Claude chat today, but with pers
 ## 2. Core Concepts
 
 ### 2.1 Project
-A Project is a named container that groups related sessions and holds a `design.md` — the design system contract used when generating prototype prompts.
+A Project is a named container that groups related sessions. It holds two persistent knowledge artifacts that make every session under it context-aware from round 1.
 
 **Fields:**
 - `id` — uuid
 - `user_id` — owner
 - `name` — project name (e.g. "Invoice Module", "Onboarding Flow")
-- `design_md` — text, nullable. The project's design system spec.
+- `context` — jsonb. Project context (business + technical profile). See below.
+- `design_md` — text, nullable. The design system contract.
 - `design_md_source` — enum: `uploaded` | `generated` | null
 - `created_at`
 
-**design.md behaviour:**
-- Existing project → PM pastes or uploads their existing `design.md`
-- New project → AI generates a starter `design.md` from the BRD + Q&A answers at session finalization time. PM can edit before saving.
-- Used exclusively by the Prototype Prompt generator (section 9 of the living document)
+#### Project Context
+A structured knowledge base the PM fills in once per project. Feeds into every AI analysis round — gap analysis, clarification questions, data model hints, API hints all become project-aware.
+
+**Business profile:**
+- Product / company description (what you build, who you serve)
+- Target users — real personas and roles that exist in the system today
+- Business domain & industry
+- Compliance & regulatory rules (e.g. data residency, OJK requirements)
+- Internal naming conventions (what you call things — don't let AI rename them)
+- Relevant past decisions ("we sunset the legacy billing module in Q1 2026")
+
+**Technical profile:**
+- Frontend stack (e.g. Next.js 14, Tailwind)
+- Backend stack (e.g. Node, Supabase, QStash)
+- Existing systems & integrations (what's already built and live)
+- Integration constraints (third-party APIs, rate limits, contract limitations)
+- Architectural constraints ("no microservices", "all data must stay onshore")
+- Known tech debt that affects new features
+
+**How context is populated:**
+- PM fills in a structured form when creating a project (guided, not a blank textarea)
+- AI can suggest context from the first BRD paste ("I noticed this BRD mentions Xendit — should I add that to your tech stack?")
+- PM can update context at any time; updated context marks no existing sections stale (context informs future generations only)
+
+**How context is used:**
+- Prepended as a system-level instruction to every AI call in the session
+- Gap analysis uses it to flag inconsistencies with existing systems
+- Clarification questions skip things the context already answers
+- Engineer section data model hints reference existing entities from context
+- Engineer section API hints reference known integrations from context
+
+#### design.md
+- Existing project → paste or upload existing `design.md`
+- New project → AI generates a starter from BRD + Q&A at finalization time; PM edits before saving
+- Used exclusively by the Prototype Prompt generator (section 9)
 
 ### 2.2 Session (Living Document)
 Each session represents one feature/BRD being refined. It is a **living document** with 9 independent sections that fill in progressively.
@@ -210,10 +242,33 @@ create table projects (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   name text not null,
+  context jsonb default '{}',      -- business + technical profile
   design_md text,
   design_md_source text check (design_md_source in ('uploaded', 'generated')),
   created_at timestamptz default now()
 );
+```
+
+**`context` jsonb shape:**
+```json
+{
+  "business": {
+    "description": "",
+    "target_users": [],
+    "domain": "",
+    "compliance": [],
+    "naming_conventions": {},
+    "past_decisions": []
+  },
+  "technical": {
+    "frontend": "",
+    "backend": "",
+    "existing_systems": [],
+    "integrations": [],
+    "constraints": [],
+    "tech_debt": []
+  }
+}
 ```
 
 ### Updated table: `analysis_results`
@@ -231,6 +286,7 @@ Add columns:
 ### New routes:
 - `POST /api/projects` — create project
 - `GET /api/projects` — list user's projects
+- `PATCH /api/projects/[id]/context` — update project context (business + technical profile)
 - `PATCH /api/projects/[id]/design-md` — update design.md
 - `POST /api/generate-section` — generate a specific section: `{ sessionId, section: 'engineer' | 'designer' | ... }`
 - `POST /api/feedback` — process feedback, return gap delta and recommended updates
