@@ -45,7 +45,7 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
           badges={[...badges]}
           status={sectionStates[key as keyof SectionStates]}
           disabled={!isReady}
-          onGenerate={isReady ? () => {} : undefined}
+          // onGenerate intentionally omitted — wired in Plan 4
         />
       ))}
 

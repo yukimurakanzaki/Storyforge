@@ -159,6 +159,15 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
               placeholder={'Tidak pakai microservices\nSemua data onshore'}
             />
           </Field>
+          <Field label="Technical debt yang perlu diperhatikan" hint="Satu per baris">
+            <textarea
+              className="input-base"
+              rows={2}
+              value={toLines(ctx.technical.techDebt)}
+              onChange={e => setT('techDebt', e.target.value)}
+              placeholder="Legacy payment module belum di-refactor&#10;Auth middleware perlu update untuk compliance"
+            />
+          </Field>
         </div>
       </div>
 
@@ -183,13 +192,13 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label className="block text-sm text-slate-300 mb-1">
+    <label className="block text-sm text-slate-300 mb-1 cursor-pointer">
+      <span className="block mb-1">
         {label}
         {hint && <span className="text-slate-500 text-xs ml-2">({hint})</span>}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   )
 }
 
