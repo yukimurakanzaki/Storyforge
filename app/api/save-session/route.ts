@@ -94,6 +94,9 @@ export async function POST(request: NextRequest) {
       .update({
         requirements: req,
         status: 'done',
+        session_state: (b as Record<string, unknown>).sessionState ?? 'done',
+        sections: (b as Record<string, unknown>).sections ?? {},
+        section_states: (b as Record<string, unknown>).sectionStates ?? {},
       })
       .eq('session_id', sessionId)
       .eq('user_id', user.id)
@@ -145,6 +148,19 @@ export async function POST(request: NextRequest) {
         messages,
         status: 'finalizing',
         created_at: new Date().toISOString(),
+        project_id: b.projectId ?? null,
+        session_state: b.sessionState ?? 'refining',
+        sections: b.sections ?? {},
+        section_states: b.sectionStates ?? {
+          foundation: 'empty',
+          roles: 'empty',
+          flow: 'empty',
+          engineer: 'empty',
+          designer: 'empty',
+          qa: 'empty',
+          templates: 'empty',
+          stakeholder: 'empty',
+        },
       },
       { onConflict: 'session_id' }
     )
