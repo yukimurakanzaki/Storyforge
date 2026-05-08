@@ -96,30 +96,30 @@ export interface TempSession {
 export type ProjectContext = {
   business: {
     description: string
-    target_users: string[]
+    targetUsers: string[]
     domain: string
     compliance: string[]
-    naming_conventions: Record<string, string>
-    past_decisions: string[]
+    namingConventions: Record<string, string>
+    pastDecisions: string[]
   }
   technical: {
     frontend: string
     backend: string
-    existing_systems: string[]
+    existingSystems: string[]
     integrations: string[]
     constraints: string[]
-    tech_debt: string[]
+    techDebt: string[]
   }
 }
 
 export type Project = {
   id: string
-  user_id: string
+  userId: string
   name: string
   context: ProjectContext
-  design_md: string | null
-  design_md_source: 'uploaded' | 'generated' | null
-  created_at: string
+  designMd: string | null
+  designMdSource: 'uploaded' | 'generated' | null
+  createdAt: string
 }
 
 export type SectionStatus = 'empty' | 'generating' | 'done' | 'stale'
@@ -136,6 +136,8 @@ export type SectionName =
 
 export type SectionStates = Record<SectionName, SectionStatus>
 
+// Each section's generated content blob. foundation: FoundationData (see FoundationSection.tsx).
+// Other section shapes defined in Plan 4.
 export type SectionBlobs = Partial<Record<SectionName, unknown>>
 
 export type SessionState = 'refining' | 'ready' | 'done'
