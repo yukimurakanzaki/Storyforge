@@ -141,3 +141,25 @@ export type SectionStates = Record<SectionName, SectionStatus>
 export type SectionBlobs = Partial<Record<SectionName, unknown>>
 
 export type SessionState = 'refining' | 'ready' | 'done'
+
+export type Gap = {
+  category: string
+  description: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+export type QAEntry = {
+  question: string
+  answer: string
+  round: number
+}
+
+export type FoundationData = {
+  brd_summary: string
+  gap_list: Gap[]
+  readiness_score: number
+  readiness_label: string
+  qa_log: QAEntry[]
+  assumptions: string[]
+  out_of_scope: string[]
+}

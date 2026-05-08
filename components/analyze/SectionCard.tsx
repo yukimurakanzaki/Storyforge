@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SectionStatus } from '@/types'
 
 type Props = {
@@ -32,14 +32,19 @@ export function SectionCard({
 }: Props) {
   const [open, setOpen] = useState(status === 'done' || status === 'stale')
 
+  useEffect(() => {
+    if (status === 'done' || status === 'stale') setOpen(true)
+  }, [status])
+
   return (
     <div className="border border-slate-700 rounded-xl bg-slate-900 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left"
           aria-expanded={open}
+          aria-controls={`section-body-${title}`}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left"
         >
           <span className="text-lg flex-shrink-0">{icon}</span>
           <span className="font-semibold text-slate-100 text-sm truncate">{title}</span>
@@ -59,6 +64,7 @@ export function SectionCard({
 
           {status === 'done' && onCopy && (
             <button
+              aria-label={`Salin ${title}`}
               onClick={onCopy}
               className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded border border-slate-700 hover:border-slate-500 transition-colors"
             >
@@ -68,6 +74,7 @@ export function SectionCard({
 
           {(status === 'empty' || status === 'stale') && onGenerate && (
             <button
+              aria-label={status === 'stale' ? `Perbarui ${title}` : `Buat ${title}`}
               onClick={onGenerate}
               disabled={disabled}
               className="text-xs bg-teal-700 hover:bg-teal-600 disabled:bg-slate-700 disabled:text-slate-500 text-white px-3 py-1 rounded transition-colors"
@@ -84,13 +91,13 @@ export function SectionCard({
 
       {/* Body */}
       {open && children && (
-        <div className="border-t border-slate-800 px-4 py-4">
+        <div id={`section-body-${title}`} className="border-t border-slate-800 px-4 py-4">
           {children}
         </div>
       )}
 
       {open && !children && status === 'empty' && (
-        <div className="border-t border-slate-800 px-4 py-8 text-center text-slate-600 text-sm">
+        <div id={`section-body-${title}`} className="border-t border-slate-800 px-4 py-8 text-center text-slate-600 text-sm">
           Klik &ldquo;Buat&rdquo; untuk menghasilkan bagian ini
         </div>
       )}

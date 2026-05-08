@@ -1,27 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { FoundationData, Gap, QAEntry } from '@/types'
 
-type Gap = {
-  category: string
-  description: string
-  severity: 'high' | 'medium' | 'low'
-}
-
-type QAEntry = {
-  question: string
-  answer: string
-  round: number
-}
-
-export type FoundationData = {
-  brd_summary: string
-  gap_list: Gap[]
-  readiness_score: number
-  readiness_label: string
-  qa_log: QAEntry[]
-  assumptions: string[]
-  out_of_scope: string[]
-}
+export type { FoundationData } from '@/types'
 
 type Props = {
   data: FoundationData
@@ -65,8 +46,8 @@ export function FoundationSection({ data }: Props) {
             Gap ({data.gap_list.length})
           </div>
           <div className="space-y-2">
-            {data.gap_list.map((gap, i) => (
-              <div key={i} className={`border rounded-lg px-3 py-2 text-sm ${SEVERITY_COLORS[gap.severity]}`}>
+            {data.gap_list.map((gap: Gap, i: number) => (
+              <div key={`${gap.category}-${gap.severity}-${i}`} className={`border rounded-lg px-3 py-2 text-sm ${SEVERITY_COLORS[gap.severity]}`}>
                 <span className="font-medium">[{gap.category}]</span> {gap.description}
               </div>
             ))}
@@ -81,9 +62,9 @@ export function FoundationSection({ data }: Props) {
             Asumsi AI ({data.assumptions.length})
           </div>
           <ul className="space-y-1">
-            {data.assumptions.map((a, i) => (
-              <li key={i} className="text-slate-400 text-sm flex gap-2">
-                <span className="text-amber-500 flex-shrink-0">⚠</span> {a}
+            {data.assumptions.map((a: string, i: number) => (
+              <li key={`assumption-${i}`} className="text-slate-400 text-sm flex gap-2">
+                <span aria-hidden="true" className="text-amber-500 flex-shrink-0">⚠</span> {a}
               </li>
             ))}
           </ul>
@@ -97,8 +78,8 @@ export function FoundationSection({ data }: Props) {
             Di Luar Scope ({data.out_of_scope.length})
           </div>
           <ul className="space-y-1">
-            {data.out_of_scope.map((item, i) => (
-              <li key={i} className="text-slate-500 text-sm flex gap-2">
+            {data.out_of_scope.map((item: string, i: number) => (
+              <li key={`oos-${i}`} className="text-slate-500 text-sm flex gap-2">
                 <span className="flex-shrink-0">—</span> {item}
               </li>
             ))}
@@ -110,6 +91,7 @@ export function FoundationSection({ data }: Props) {
       {data.qa_log.length > 0 && (
         <div>
           <button
+            aria-expanded={qaOpen}
             onClick={() => setQaOpen(o => !o)}
             className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1 hover:text-slate-300 transition-colors"
           >
@@ -117,8 +99,8 @@ export function FoundationSection({ data }: Props) {
           </button>
           {qaOpen && (
             <div className="mt-2 space-y-3">
-              {data.qa_log.map((entry, i) => (
-                <div key={i} className="bg-slate-800/50 rounded-lg p-3">
+              {data.qa_log.map((entry: QAEntry, i: number) => (
+                <div key={`qa-${entry.round}-${i}`} className="bg-slate-800/50 rounded-lg p-3">
                   <div className="text-xs text-slate-500 mb-1">Ronde {entry.round}</div>
                   <div className="text-slate-300 text-sm font-medium mb-1">{entry.question}</div>
                   <div className="text-slate-400 text-sm">{entry.answer}</div>
