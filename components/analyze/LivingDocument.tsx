@@ -1,7 +1,7 @@
 'use client'
 import { SectionCard } from './SectionCard'
 import { FoundationSection } from './FoundationSection'
-import { FoundationData } from './FoundationSection'
+import type { FoundationData } from '@/types'
 import { SectionStates, SessionState } from '@/types'
 
 type Props = {

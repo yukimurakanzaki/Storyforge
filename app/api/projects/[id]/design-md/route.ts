@@ -18,6 +18,10 @@ export async function PATCH(
 
   if (!body.design_md) return NextResponse.json({ error: 'design_md required' }, { status: 400 })
 
+  if (body.source !== undefined && body.source !== 'uploaded' && body.source !== 'generated') {
+    return NextResponse.json({ error: 'source must be "uploaded" or "generated"' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .update({

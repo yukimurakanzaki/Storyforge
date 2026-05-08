@@ -11,6 +11,7 @@ type Props = {
 export function ProjectSelector({ onSelect }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [showContextForm, setShowContextForm] = useState<Project | null>(null)
@@ -18,16 +19,21 @@ export function ProjectSelector({ onSelect }: Props) {
   useEffect(() => {
     fetchProjects()
       .then(setProjects)
+      .catch(() => setError('Gagal memuat project. Muat ulang halaman.'))
       .finally(() => setLoading(false))
   }, [])
 
   const handleCreate = async () => {
     if (!newName.trim()) return
-    const project = await createProject(newName.trim())
-    setProjects(p => [project, ...p])
-    setNewName('')
-    setCreating(false)
-    setShowContextForm(project)
+    try {
+      const project = await createProject(newName.trim())
+      setProjects(p => [project, ...p])
+      setNewName('')
+      setCreating(false)
+      setShowContextForm(project)
+    } catch {
+      setError('Gagal membuat project. Coba lagi.')
+    }
   }
 
   const handleContextSaved = async (
@@ -91,6 +97,10 @@ export function ProjectSelector({ onSelect }: Props) {
             Batal
           </button>
         </div>
+      )}
+
+      {error && (
+        <p className="text-red-400 text-sm">{error}</p>
       )}
 
       {loading && <p className="text-slate-500 text-sm">Memuat project...</p>}

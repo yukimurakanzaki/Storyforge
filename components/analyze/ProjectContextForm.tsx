@@ -2,23 +2,28 @@
 import { useState } from 'react'
 import { ProjectContext } from '@/types'
 
-const DEFAULT_CONTEXT: ProjectContext = {
+type FormDraft = {
   business: {
-    description: '',
-    targetUsers: [],
-    domain: '',
-    compliance: [],
-    namingConventions: {},
-    pastDecisions: [],
-  },
+    description: string
+    targetUsers: string
+    domain: string
+    compliance: string
+    namingConventions: Record<string, string>
+    pastDecisions: string
+  }
   technical: {
-    frontend: '',
-    backend: '',
-    existingSystems: [],
-    integrations: [],
-    constraints: [],
-    techDebt: [],
-  },
+    frontend: string
+    backend: string
+    existingSystems: string
+    integrations: string
+    constraints: string
+    techDebt: string
+  }
+}
+
+const DEFAULT_DRAFT: FormDraft = {
+  business: { description: '', targetUsers: '', domain: '', compliance: '', namingConventions: {}, pastDecisions: '' },
+  technical: { frontend: '', backend: '', existingSystems: '', integrations: '', constraints: '', techDebt: '' },
 }
 
 type Props = {
@@ -31,21 +36,39 @@ function toLines(val: string[] | string): string {
   return Array.isArray(val) ? val.join('\n') : val
 }
 
-function toArray(val: string[] | string): string[] {
-  if (Array.isArray(val)) return val.filter(Boolean)
+function toArray(val: string): string[] {
   return val.split('\n').map(s => s.trim()).filter(Boolean)
 }
 
+function toDraft(ctx: ProjectContext): FormDraft {
+  return {
+    business: {
+      description: ctx.business.description,
+      targetUsers: toLines(ctx.business.targetUsers),
+      domain: ctx.business.domain,
+      compliance: toLines(ctx.business.compliance),
+      namingConventions: ctx.business.namingConventions,
+      pastDecisions: toLines(ctx.business.pastDecisions),
+    },
+    technical: {
+      frontend: ctx.technical.frontend,
+      backend: ctx.technical.backend,
+      existingSystems: toLines(ctx.technical.existingSystems),
+      integrations: toLines(ctx.technical.integrations),
+      constraints: toLines(ctx.technical.constraints),
+      techDebt: toLines(ctx.technical.techDebt),
+    },
+  }
+}
+
 export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
-  const [ctx, setCtx] = useState<ProjectContext>(initial ?? DEFAULT_CONTEXT)
+  const [ctx, setCtx] = useState<FormDraft>(initial ? toDraft(initial) : DEFAULT_DRAFT)
   const [saving, setSaving] = useState(false)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setB = (key: keyof ProjectContext['business'], value: any) =>
+  const setB = (key: keyof FormDraft['business'], value: string | Record<string, string>) =>
     setCtx(c => ({ ...c, business: { ...c.business, [key]: value } }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setT = (key: keyof ProjectContext['technical'], value: any) =>
+  const setT = (key: keyof FormDraft['technical'], value: string) =>
     setCtx(c => ({ ...c, technical: { ...c.technical, [key]: value } }))
 
   const handleSave = async () => {
@@ -99,8 +122,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={3}
-              value={toLines(ctx.business.targetUsers)}
-              onChange={e => setB('targetUsers', e.target.value as unknown as string[])}
+              value={ctx.business.targetUsers}
+              onChange={e => setB('targetUsers', e.target.value)}
               placeholder={"Product Manager\nFinance Approver\nSystem Admin"}
             />
           </label>
@@ -123,8 +146,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={2}
-              value={toLines(ctx.business.compliance)}
-              onChange={e => setB('compliance', e.target.value as unknown as string[])}
+              value={ctx.business.compliance}
+              onChange={e => setB('compliance', e.target.value)}
               placeholder={"Data harus onshore Indonesia\nOJK POJK 77/2016"}
             />
           </label>
@@ -137,8 +160,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={2}
-              value={toLines(ctx.business.pastDecisions)}
-              onChange={e => setB('pastDecisions', e.target.value as unknown as string[])}
+              value={ctx.business.pastDecisions}
+              onChange={e => setB('pastDecisions', e.target.value)}
               placeholder={"Modul billing lama sudah sunset Q1 2026\nTidak menggunakan microservices"}
             />
           </label>
@@ -176,8 +199,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={3}
-              value={toLines(ctx.technical.existingSystems)}
-              onChange={e => setT('existingSystems', e.target.value as unknown as string[])}
+              value={ctx.technical.existingSystems}
+              onChange={e => setT('existingSystems', e.target.value)}
               placeholder={"Auth menggunakan Supabase magic link\nPembayaran: Xendit"}
             />
           </label>
@@ -190,8 +213,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={2}
-              value={toLines(ctx.technical.integrations)}
-              onChange={e => setT('integrations', e.target.value as unknown as string[])}
+              value={ctx.technical.integrations}
+              onChange={e => setT('integrations', e.target.value)}
               placeholder={"Xendit payment gateway\nResend email"}
             />
           </label>
@@ -204,8 +227,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={2}
-              value={toLines(ctx.technical.constraints)}
-              onChange={e => setT('constraints', e.target.value as unknown as string[])}
+              value={ctx.technical.constraints}
+              onChange={e => setT('constraints', e.target.value)}
               placeholder={"Tidak pakai microservices\nSemua data onshore"}
             />
           </label>
@@ -218,8 +241,8 @@ export function ProjectContextForm({ initial, onSave, onCancel }: Props) {
             <textarea
               className="input-base"
               rows={2}
-              value={toLines(ctx.technical.techDebt)}
-              onChange={e => setT('techDebt', e.target.value as unknown as string[])}
+              value={ctx.technical.techDebt}
+              onChange={e => setT('techDebt', e.target.value)}
               placeholder={"Legacy billing module belum di-refactor\nAPI rate limiting belum diimplementasi"}
             />
           </label>

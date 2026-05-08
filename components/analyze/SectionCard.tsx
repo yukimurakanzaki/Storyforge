@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { SectionStatus } from '@/types'
 
 const STATUS_LABELS: Record<SectionStatus, string> = {
@@ -28,7 +28,8 @@ type Props = {
 }
 
 export function SectionCard({ title, icon, badges, status, disabled, onGenerate, onCopy, children }: Props) {
-  const panelId = `section-panel-${title.toLowerCase().replace(/\s+/g, '-')}`
+  const id = useId()
+  const panelId = `section-panel-${id}`
   const [open, setOpen] = useState(status === 'done' || status === 'stale')
 
   useEffect(() => {
