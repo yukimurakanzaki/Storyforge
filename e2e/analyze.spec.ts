@@ -194,6 +194,40 @@ test('user sees a helpful error when refinement fails', async ({ page }) => {
   await expect(page.getByText('Payment gateway mana yang akan digunakan?', { exact: true })).toBeVisible()
 })
 
+test('living document — create project, paste BRD, see foundation section', async ({ page }) => {
+  await page.goto('/analyze')
+
+  // Project selector appears
+  await expect(page.getByText('Pilih Project')).toBeVisible()
+
+  // Create new project
+  await page.getByText('+ Project baru').click()
+  await page.getByPlaceholder('Nama project, misal: Invoice Module').fill('Test Project E2E')
+  await page.keyboard.press('Enter')
+
+  // Context form appears — skip by clicking Batal
+  await page.getByRole('button', { name: 'Batal' }).click()
+
+  // BRD input appears
+  await expect(page.getByRole('textbox')).toBeVisible()
+  await page.getByRole('textbox').fill(
+    'Sistem perlu fitur approval invoice. Finance Approver bisa approve atau reject invoice dari vendor.'
+  )
+  await page.getByRole('button', { name: /Analisis/i }).click()
+
+  // Analyzing state
+  await expect(page.getByText('Menganalisis BRD')).toBeVisible()
+
+  // Foundation section appears
+  await expect(page.getByText('Foundation')).toBeVisible({ timeout: 30000 })
+  await expect(page.getByText('Readiness Score')).toBeVisible()
+})
+
+test('living document — re-open session shows readiness score in sidebar', async ({ page }) => {
+  await page.goto('/dashboard')
+  await expect(page.getByText(/\d+\/100/)).toBeVisible({ timeout: 10000 })
+})
+
 test('guest at quota cannot start another analysis', async ({ page }) => {
   let analyzeCalls = 0
   await page.route('**/api/analyze', async (route) => {
