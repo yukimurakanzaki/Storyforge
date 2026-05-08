@@ -1,18 +1,23 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { BRDInput } from '@/components/analyze/BRDInput'
 import { RefinementChat } from '@/components/analyze/RefinementChat'
 import { SAMPLE_BRD } from '@/lib/constants'
 import type {
   AnalysisResult,
   ChatMessage,
-  Phase,
   QAAnswer,
   RequirementsResult,
+  Project,
+  SectionStates,
+  SessionState,
+  FoundationData,
 } from '@/types'
 import Link from 'next/link'
 import { SessionSidebar } from '@/components/analyze/SessionSidebar'
+import { ProjectSelector } from '@/components/analyze/ProjectSelector'
+import { LivingDocument } from '@/components/analyze/LivingDocument'
 import {
   initTempSession,
   saveTempSession,
@@ -32,6 +37,19 @@ interface RefineAPIResponse {
   message: string
   readyToFinalize: boolean
   analysis: Omit<AnalysisResult, 'sessionId' | 'createdAt'> | null
+}
+
+type AppPhase = 'select-project' | 'input' | 'analyzing' | 'refining' | 'finalizing' | 'done'
+
+const DEFAULT_SECTION_STATES: SectionStates = {
+  foundation: 'empty',
+  roles: 'empty',
+  flow: 'empty',
+  engineer: 'empty',
+  designer: 'empty',
+  qa: 'empty',
+  templates: 'empty',
+  stakeholder: 'empty',
 }
 
 function buildFirstAssistantMessage(analysis: AnalysisResult): string {
@@ -76,7 +94,8 @@ function buildQASubmissionMessage(
 
 export default function AnalyzePage() {
   const [brdText, setBrdText] = useState('')
-  const [phase, setPhase] = useState<Phase>('input')
+  const [phase, setPhase] = useState<AppPhase>('select-project')
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [requirements, setRequirements] = useState<RequirementsResult | null>(null)
@@ -91,6 +110,9 @@ export default function AnalyzePage() {
   })
   const [qaAnswers, setQaAnswers] = useState<QAAnswer[]>([])
   const [resolvedIndices, setResolvedIndices] = useState<number[]>([])
+  const [foundationData, setFoundationData] = useState<FoundationData | null>(null)
+  const [sectionStates, setSectionStates] = useState<SectionStates>(DEFAULT_SECTION_STATES)
+  const [sessionState, setSessionState] = useState<SessionState>('refining')
   const isFinalizingRef = useRef(false)
 
   useMigrateTempSession(isAuthenticated)
@@ -136,9 +158,15 @@ export default function AnalyzePage() {
     })
   }, [result])
 
+  function handleProjectSelect(project: Project) {
+    setSelectedProject(project)
+    setPhase('input')
+  }
+
   function handleNewSession() {
     setBrdText('')
-    setPhase('input')
+    setPhase('select-project')
+    setSelectedProject(null)
     setResult(undefined)
     setMessages([])
     setQaAnswers([])
@@ -146,6 +174,9 @@ export default function AnalyzePage() {
     setRequirements(null)
     setError(undefined)
     setShowAccountPrompt(false)
+    setFoundationData(null)
+    setSectionStates(DEFAULT_SECTION_STATES)
+    setSessionState('refining')
     isFinalizingRef.current = false
   }
 
@@ -167,15 +198,21 @@ export default function AnalyzePage() {
     setQaAnswers([])
     setResolvedIndices([])
     setRequirements(null)
+    setFoundationData(null)
+    setSectionStates(DEFAULT_SECTION_STATES)
 
     try {
+      const projectContextStr = selectedProject
+        ? `\n\nProject Context:\n${JSON.stringify(selectedProject.context, null, 2)}`
+        : ''
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: text + projectContextStr }),
       })
 
       if (!res.ok) {
@@ -192,6 +229,25 @@ export default function AnalyzePage() {
         createdAt: new Date().toISOString(),
       }
 
+      const foundation: FoundationData = {
+        brd_summary: text.slice(0, 500),
+        gap_list: (parsed.gapList ?? []).map((g: { category: string; description: string; severity: 'high' | 'medium' | 'low' }) => ({
+          category: g.category,
+          description: g.description,
+          severity: g.severity,
+        })),
+        readiness_score: parsed.readinessScore ?? 0,
+        readiness_label: parsed.readinessLabel ?? '',
+        qa_log: [],
+        assumptions: parsed.assumptions ?? [],
+        out_of_scope: parsed.outOfScope ?? [],
+      }
+      setFoundationData(foundation)
+
+      const newSessionState: SessionState = (parsed.readinessScore ?? 0) >= 80 ? 'ready' : 'refining'
+      setSessionState(newSessionState)
+      setSectionStates(s => ({ ...s, foundation: 'done' }))
+
       const firstMsg: ChatMessage = {
         role: 'assistant',
         content: buildFirstAssistantMessage(analysisResult),
@@ -207,6 +263,10 @@ export default function AnalyzePage() {
             brdText: text,
             initialAnalysis: analysisResult,
             messages: [firstMsg],
+            projectId: selectedProject?.id ?? null,
+            sessionState: newSessionState,
+            sections: { foundation },
+            sectionStates: { ...DEFAULT_SECTION_STATES, foundation: 'done' },
           }),
         })
         if (saveRes.ok) {
@@ -279,6 +339,24 @@ export default function AnalyzePage() {
           ...parsed.analysis,
         }
         setResult(updatedResult)
+
+        // Update foundation data from refine response
+        if (foundationData) {
+          const updatedFoundation: FoundationData = {
+            ...foundationData,
+            gap_list: (parsed.analysis.gapList ?? foundationData.gap_list).map((g) => ({
+              category: g.category,
+              description: g.description,
+              severity: g.severity,
+            })),
+            readiness_score: parsed.analysis.readinessScore ?? foundationData.readiness_score,
+            readiness_label: parsed.analysis.readinessLabel ?? foundationData.readiness_label,
+          }
+          setFoundationData(updatedFoundation)
+          const newScore = updatedFoundation.readiness_score
+          setSessionState(newScore >= 80 ? 'ready' : 'refining')
+        }
+
         setQaAnswers([])
         setResolvedIndices([])
         persistAnalysisState(currentBrdText, updatedMessages, updatedResult)
@@ -437,26 +515,71 @@ export default function AnalyzePage() {
     }
   }
 
+  const handleCopySection = useCallback((_section: string, content: string) => {
+    navigator.clipboard.writeText(content)
+  }, [])
+
   const isPostAnalysis = phase === 'refining' || phase === 'finalizing' || phase === 'done'
+
+  // ---- Render ----
+
+  if (phase === 'select-project') {
+    return (
+      <div className="flex h-screen overflow-hidden bg-white">
+        <SessionSidebar
+          isAuthenticated={isAuthenticated}
+          onNewSession={handleNewSession}
+        />
+        <div id="main-content" className="flex flex-col flex-1 min-w-0 h-screen overflow-y-auto">
+          <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">
+            <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors text-sm">
+              StoryForge<span className="text-teal-500">.id</span>
+            </Link>
+            <div className="flex items-center gap-3">
+              {!isAuthenticated && (
+                <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-2.5 py-1 border border-gray-200">
+                  Guest {guestUsage.count}/{guestUsage.limit}
+                </span>
+              )}
+              {isAuthenticated ? (
+                <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Dashboard</Link>
+              ) : (
+                <Link href="/login" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Masuk</Link>
+              )}
+            </div>
+          </header>
+          <div className="max-w-2xl mx-auto px-6 py-10 w-full">
+            <ProjectSelector onSelect={handleProjectSelect} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
-
-      {/* Dark sidebar */}
       <SessionSidebar
         isAuthenticated={isAuthenticated}
         onNewSession={handleNewSession}
       />
 
-      {/* Main content */}
       <div id="main-content" className="flex flex-col flex-1 min-w-0 h-screen">
-
-        {/* Header */}
         <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors">
               StoryForge<span className="text-teal-500">.id</span>
             </Link>
+            {selectedProject && (
+              <>
+                <span className="text-gray-300 select-none">/</span>
+                <button
+                  onClick={() => setPhase('select-project')}
+                  className="text-gray-400 text-xs hover:text-gray-700 transition-colors"
+                >
+                  {selectedProject.name}
+                </button>
+              </>
+            )}
             {isPostAnalysis && result && (
               <>
                 <span className="text-gray-300 select-none">/</span>
@@ -485,7 +608,6 @@ export default function AnalyzePage() {
           </div>
         </header>
 
-        {/* Account prompt */}
         {showAccountPrompt && (
           <div className="flex-shrink-0 bg-teal-600 px-5 py-2.5 text-sm text-white flex items-center justify-between gap-4">
             <span>Simpan hasil analisis — buat akun gratis untuk menyimpan sesi dan melanjutkan kapan saja.</span>
@@ -506,7 +628,6 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* Error banner */}
         {error && (
           <div className="flex-shrink-0 bg-red-50 border-b border-red-100 px-5 py-2.5 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
@@ -514,12 +635,17 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* Main area */}
         <div className="flex flex-col flex-1 min-h-0">
           {phase === 'input' ? (
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto px-6 py-10">
                 <div className="mb-8">
+                  <button
+                    onClick={() => setPhase('select-project')}
+                    className="text-sm text-gray-400 hover:text-gray-700 transition-colors mb-4 block"
+                  >
+                    ← {selectedProject?.name ?? 'Pilih project'}
+                  </button>
                   <h1 className="text-2xl font-extrabold text-gray-900">Analisis BRD</h1>
                   <p className="mt-1.5 text-sm text-gray-500">
                     Paste BRD kamu dan dapatkan gap analysis, readiness score, serta pertanyaan klarifikasi dalam hitungan detik.
@@ -537,34 +663,47 @@ export default function AnalyzePage() {
           ) : phase === 'analyzing' ? (
             <AnalyzingState />
           ) : (
-            <RefinementChat
-              messages={messages}
-              result={result}
-              requirements={requirements}
-              qaAnswers={qaAnswers}
-              resolvedIndices={resolvedIndices}
-              isRefining={isRefining}
-              isFinalizing={isFinalizing}
-              phase={phase}
-              onSend={handleSendMessage}
-              onReanalyze={handleReanalyze}
-              onSubmitQA={handleSubmitQA}
-              onQAAnswerChange={handleQAAnswerChange}
-              onQAOutOfScopeChange={handleQAOutOfScopeChange}
-              onGenerate={isPostAnalysis ? handleFinalize : undefined}
-              onRequirementsRetry={() => {
-                setPhase('refining')
-                setRequirements(null)
-                setIsFinalizing(false)
-              }}
-              onRequirementsRegenerate={() => {
-                setRequirements(null)
-                setIsFinalizing(false)
-                isFinalizingRef.current = false
-                handleFinalize()
-              }}
-              canSubmitFeedback={isAuthenticated && !!result?.id}
-            />
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+              {/* Living document shown in refining/finalizing/done alongside the chat */}
+              {foundationData && (phase === 'refining' || phase === 'finalizing' || phase === 'done') && (
+                <div className="flex-shrink-0 border-b border-gray-100 px-6 py-4 bg-gray-50">
+                  <LivingDocument
+                    foundationData={foundationData}
+                    sectionStates={sectionStates}
+                    sessionState={sessionState}
+                    onCopySection={handleCopySection}
+                  />
+                </div>
+              )}
+              <RefinementChat
+                messages={messages}
+                result={result}
+                requirements={requirements}
+                qaAnswers={qaAnswers}
+                resolvedIndices={resolvedIndices}
+                isRefining={isRefining}
+                isFinalizing={isFinalizing}
+                phase={phase as 'refining' | 'finalizing' | 'done'}
+                onSend={handleSendMessage}
+                onReanalyze={handleReanalyze}
+                onSubmitQA={handleSubmitQA}
+                onQAAnswerChange={handleQAAnswerChange}
+                onQAOutOfScopeChange={handleQAOutOfScopeChange}
+                onGenerate={isPostAnalysis ? handleFinalize : undefined}
+                onRequirementsRetry={() => {
+                  setPhase('refining')
+                  setRequirements(null)
+                  setIsFinalizing(false)
+                }}
+                onRequirementsRegenerate={() => {
+                  setRequirements(null)
+                  setIsFinalizing(false)
+                  isFinalizingRef.current = false
+                  handleFinalize()
+                }}
+                canSubmitFeedback={isAuthenticated && !!result?.id}
+              />
+            </div>
           )}
         </div>
       </div>
