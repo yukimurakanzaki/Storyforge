@@ -43,7 +43,7 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
           key={key}
           title={title}
           icon={icon}
-          badges={badges as string[]}
+          badges={[...badges]}
           status={sectionStates[key as keyof SectionStates]}
           disabled={!isReady}
         />
