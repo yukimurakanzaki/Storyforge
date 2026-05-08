@@ -92,3 +92,72 @@ export interface TempSession {
   hasGenerated: boolean
   qaAnswers: QAAnswer[]
 }
+
+export type ProjectContext = {
+  business: {
+    description: string
+    targetUsers: string[]
+    domain: string
+    compliance: string[]
+    namingConventions: Record<string, string>
+    pastDecisions: string[]
+  }
+  technical: {
+    frontend: string
+    backend: string
+    existingSystems: string[]
+    integrations: string[]
+    constraints: string[]
+    techDebt: string[]
+  }
+}
+
+export type Project = {
+  id: string
+  userId: string
+  name: string
+  context: ProjectContext
+  designMd: string | null
+  designMdSource: 'uploaded' | 'generated' | null
+  createdAt: string
+}
+
+export type SectionStatus = 'empty' | 'generating' | 'done' | 'stale'
+
+export type SectionName =
+  | 'foundation'
+  | 'roles'
+  | 'flow'
+  | 'engineer'
+  | 'designer'
+  | 'qa'
+  | 'templates'
+  | 'stakeholder'
+
+export type SectionStates = Record<SectionName, SectionStatus>
+
+export type SectionBlobs = Partial<Record<SectionName, unknown>>
+
+export type SessionState = 'refining' | 'ready' | 'done'
+
+export type Gap = {
+  category: string
+  description: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+export type QAEntry = {
+  question: string
+  answer: string
+  round: number
+}
+
+export type FoundationData = {
+  brd_summary: string
+  gap_list: Gap[]
+  readiness_score: number
+  readiness_label: string
+  qa_log: QAEntry[]
+  assumptions: string[]
+  out_of_scope: string[]
+}
