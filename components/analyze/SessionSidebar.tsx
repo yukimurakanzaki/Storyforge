@@ -110,9 +110,10 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
         ) : (
           <div className="space-y-0.5">
             {sessions.map((session) => (
-              <div
+              <Link
                 key={session.id}
-                className="rounded-lg px-3 py-2 hover:bg-gray-800 transition-colors cursor-default group"
+                href={`/analyze/${session.id}`}
+                className="block rounded-lg px-3 py-2 hover:bg-gray-800 transition-colors group"
                 title={sessionTitle(session)}
               >
                 <p className="text-sm text-gray-400 truncate group-hover:text-gray-200 transition-colors">
@@ -135,7 +136,7 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
                     </span>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

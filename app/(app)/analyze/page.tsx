@@ -446,6 +446,10 @@ export default function AnalyzePage() {
             brdText,
             initialAnalysis: result,
             messages,
+            projectId: selectedProject?.id ?? null,
+            sessionState: sessionState,
+            sections: { foundation: foundationData },
+            sectionStates: sectionStates,
           }),
         })
         if (!saveRes.ok) {
@@ -503,6 +507,9 @@ export default function AnalyzePage() {
             sessionId: result.sessionId,
             requirements: parsed,
             status: 'done',
+            sessionState: 'done',
+            sections: { foundation: foundationData },
+            sectionStates: sectionStates,
           }),
         }).catch((err) => console.error('[phase-2 save]', err))
       }
