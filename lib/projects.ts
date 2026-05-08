@@ -1,3 +1,5 @@
+// Client-only helpers — call only from Client Components or useEffect.
+// These use relative fetch URLs which require a browser context.
 import { Project, ProjectContext } from '@/types'
 
 /**

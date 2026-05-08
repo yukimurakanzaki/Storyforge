@@ -9,7 +9,16 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const context = await req.json()
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+  if (typeof body !== 'object' || body === null || !('business' in body) || !('technical' in body)) {
+    return NextResponse.json({ error: 'Invalid context shape' }, { status: 400 })
+  }
+  const context = body
 
   const { data, error } = await supabase
     .from('projects')

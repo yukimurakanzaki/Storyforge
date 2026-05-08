@@ -9,7 +9,16 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { design_md, source } = await req.json()
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+  const { design_md, source } = body as { design_md?: string; source?: string }
+  if (!design_md) {
+    return NextResponse.json({ error: 'design_md required' }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from('projects')
