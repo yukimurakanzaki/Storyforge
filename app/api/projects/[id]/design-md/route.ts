@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -28,7 +29,7 @@ export async function PATCH(
       design_md: body.design_md,
       design_md_source: body.source ?? 'uploaded'
     })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select()
     .single()
