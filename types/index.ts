@@ -136,8 +136,6 @@ export type SectionName =
 
 export type SectionStates = Record<SectionName, SectionStatus>
 
-// Each section's generated content blob. foundation: FoundationData (see FoundationSection.tsx).
-// Other section shapes defined in Plan 4.
 export type SectionBlobs = Partial<Record<SectionName, unknown>>
 
 export type SessionState = 'refining' | 'ready' | 'done'

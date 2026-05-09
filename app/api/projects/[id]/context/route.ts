@@ -3,27 +3,29 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: Record<string, unknown>
+  let context: unknown
   try {
-    body = await req.json()
+    context = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
-  if (typeof body !== 'object' || body === null || !('business' in body) || !('technical' in body)) {
-    return NextResponse.json({ error: 'Invalid context shape' }, { status: 400 })
+
+  if (typeof context !== 'object' || context === null ||
+      !('business' in context) || !('technical' in context)) {
+    return NextResponse.json({ error: 'context must have business and technical keys' }, { status: 400 })
   }
-  const context = body
 
   const { data, error } = await supabase
     .from('projects')
     .update({ context })
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select()
     .single()

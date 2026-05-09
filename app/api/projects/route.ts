@@ -21,18 +21,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: Record<string, unknown>
+  let body: { name?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
-  const { name } = body as { name?: string }
-  if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
+
+  if (!body.name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('projects')
-    .insert({ user_id: user.id, name: name.trim() })
+    .insert({ user_id: user.id, name: body.name.trim() })
     .select()
     .single()
 
