@@ -1,7 +1,8 @@
 'use client'
 import { SectionCard } from './SectionCard'
 import { FoundationSection } from './FoundationSection'
-import { FoundationData, SectionStates, SessionState } from '@/types'
+import type { FoundationData } from '@/types'
+import { SectionStates, SessionState } from '@/types'
 
 type Props = {
   foundationData: FoundationData | null
@@ -36,7 +37,7 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
         {foundationData && <FoundationSection data={foundationData} />}
       </SectionCard>
 
-      {/* Sections 2–8: disabled until session is ready */}
+      {/* Sections 2–8: disabled until session is ready; no onGenerate prop yet */}
       {SECTION_META.map(({ key, icon, title, badges }) => (
         <SectionCard
           key={key}
@@ -45,11 +46,10 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
           badges={[...badges]}
           status={sectionStates[key as keyof SectionStates]}
           disabled={!isReady}
-          // onGenerate intentionally omitted — wired in Plan 4
         />
       ))}
 
-      {/* Section 9: Export — always last, placeholder for Plan 5 */}
+      {/* Section 9: Export — always last */}
       <SectionCard
         title="Output & Export"
         icon="🚀"

@@ -9,6 +9,7 @@ interface Session {
   created_at: string
   status: 'finalizing' | 'done' | 'active' | 'archived'
   brd_text: string | null
+  readiness_score: number | null
 }
 
 interface SessionSidebarProps {
@@ -43,7 +44,7 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
     const supabase = createClient()
     supabase
       .from('analysis_results')
-      .select('id, created_at, status, brd_text')
+      .select('id, created_at, status, brd_text, readiness_score')
       .order('created_at', { ascending: false })
       .limit(20)
       .then(({ data }) => {
@@ -109,19 +110,33 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
         ) : (
           <div className="space-y-0.5">
             {sessions.map((session) => (
-              <div
+              <Link
                 key={session.id}
-                className="rounded-lg px-3 py-2 hover:bg-gray-800 transition-colors cursor-default group"
+                href={`/analyze/${session.id}`}
+                className="block rounded-lg px-3 py-2 hover:bg-gray-800 transition-colors group"
                 title={sessionTitle(session)}
               >
                 <p className="text-sm text-gray-400 truncate group-hover:text-gray-200 transition-colors">
                   {sessionTitle(session)}
                 </p>
-                <p className="text-xs text-gray-700 mt-0.5">
-                  {formatRelativeTime(session.created_at)}
-                  {session.status === 'archived' && ' · Arsip'}
-                </p>
-              </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-gray-700">
+                    {formatRelativeTime(session.created_at)}
+                    {session.status === 'archived' && ' · Arsip'}
+                  </p>
+                  {session.readiness_score != null && (
+                    <span className={`text-xs font-medium ${
+                      session.readiness_score >= 80
+                        ? 'text-teal-400'
+                        : session.readiness_score >= 50
+                        ? 'text-amber-400'
+                        : 'text-red-400'
+                    }`}>
+                      {session.readiness_score}/100
+                    </span>
+                  )}
+                </div>
+              </Link>
             ))}
           </div>
         )}

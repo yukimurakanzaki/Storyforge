@@ -1,6 +1,4 @@
--- supabase/migrations/006_projects_and_sections.sql
-
--- Projects table
+-- Create projects table
 create table if not exists projects (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
@@ -28,18 +26,19 @@ create table if not exists projects (
   created_at timestamptz default now()
 );
 
+-- RLS
 alter table projects enable row level security;
 
-create policy "Users manage own projects"
+create policy "Users can manage their own projects"
   on projects for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- Add columns to analysis_results
+-- Add new columns to analysis_results
 alter table analysis_results
   add column if not exists project_id uuid references projects,
-  add column if not exists sections jsonb not null default '{}'::jsonb,
-  add column if not exists section_states jsonb not null default '{
+  add column if not exists sections jsonb default '{}'::jsonb,
+  add column if not exists section_states jsonb default '{
     "foundation": "empty",
     "roles": "empty",
     "flow": "empty",
@@ -49,6 +48,6 @@ alter table analysis_results
     "templates": "empty",
     "stakeholder": "empty"
   }'::jsonb,
-  add column if not exists requirement_version integer not null default 1,
-  add column if not exists session_state text not null default 'refining'
+  add column if not exists requirement_version integer default 1,
+  add column if not exists session_state text default 'refining'
     check (session_state in ('refining', 'ready', 'done'));

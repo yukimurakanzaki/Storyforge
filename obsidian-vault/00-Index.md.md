@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-05-04 (WIB)
-**Status:** Pre-MVP, Impeccable audit fixes applied — score 11/20 → 16/20
+**Last Updated:** 2026-05-09 (WIB)
+**Status:** Pre-MVP, awesome-wescoff merge conflict resolved and verification green
 
 ---
 
@@ -20,6 +20,7 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]] — **LATEST**
 - [[03-Sessions/2026-05-04-impeccable-audit-fixes|2026-05-04: Impeccable Audit + Full Fix Pass]] — **LATEST**
 - [[03-Sessions/2026-05-01-output-trust-layer|2026-05-01: Output Trust Layer]]
 - [[03-Sessions/2026-04-29-auth-magic-link-fix|2026-04-29: Auth Magic Link Fix]] — **LATEST**
@@ -57,7 +58,7 @@
 
 ---
 
-## ✅ Latest Status — 2026-05-01
+## ✅ Latest Status — 2026-05-09
 
 ### Completed ✅
 
@@ -78,6 +79,8 @@
 - ✅ **Magic-link auth flow fixed** — Signup magic link now redirects to `/analyze` after Supabase session exchange, with redirect regression tests added
 - ✅ **Output Trust Layer built** — Gap confidence badges, reference text, flag feedback modal, `/api/feedback`, and Supabase migration added
 - ✅ **Trust layer validation green** — `npm test`, TypeScript, production build, and Playwright E2E all pass
+- ✅ **Awesome Wescoff merge conflict resolved** — Living document/project conflicts resolved from `claude/awesome-wescoff-d9cc26`
+- ✅ **Merge verification green** — `npx tsc --noEmit`, `npm test`, and `npm run build` pass after conflict resolution
 
 ### In Progress 🔄
 
@@ -217,6 +220,6 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-04-29-session-saved-after-guest-mode-push|2026-04-29: Session Saved After Guest Mode Push]]
+**Session Log:** [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]]
 
 **Auto-updated by Claude**
