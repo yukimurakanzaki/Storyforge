@@ -1,35 +1,72 @@
 'use client'
+
 import { SectionCard } from './SectionCard'
 import { FoundationSection } from './FoundationSection'
 import type { FoundationData } from '@/types'
 import { SectionStates, SessionState } from '@/types'
 
-type Props = {
-  foundationData: FoundationData | null
-  sectionStates: SectionStates
-  sessionState: SessionState
-  onCopySection: (section: string, content: string) => void
+// SVG icons with aria-hidden (decorative, not semantic)
+const ICONS: Record<string, { svg: string; label: string }> = {
+  foundation: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
+    label: 'Foundation',
+  },
+  roles: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    label: 'Roles & Access',
+  },
+  flow: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+    label: 'Flow & Logic',
+  },
+  engineer: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>`,
+    label: 'Engineer Section',
+  },
+  designer: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg>`,
+    label: 'Designer Section',
+  },
+  qa: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg>`,
+    label: 'QA Section',
+  },
+  templates: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`,
+    label: 'Template Artifacts',
+  },
+  stakeholder: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+    label: 'Stakeholder View',
+  },
+  export: {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    label: 'Output & Export',
+  },
 }
 
-const SECTION_META = [
-  { key: 'roles', icon: '👤', title: 'Roles & Access', badges: ['PM', 'Dev', 'Designer'] },
-  { key: 'flow', icon: '🗺️', title: 'Flow & Logic', badges: ['Dev', 'Designer', 'QA'] },
-  { key: 'engineer', icon: '⚙️', title: 'Engineer Section', badges: ['Dev'] },
-  { key: 'designer', icon: '🎨', title: 'Designer Section', badges: ['Designer'] },
-  { key: 'qa', icon: '🧪', title: 'QA Section', badges: ['QA'] },
-  { key: 'templates', icon: '📎', title: 'Template Artifacts', badges: ['Dev', 'Designer', 'QA'] },
-  { key: 'stakeholder', icon: '📊', title: 'Stakeholder View', badges: ['Business'] },
-] as const
+type SectionKey = 'foundation' | 'roles' | 'flow' | 'engineer' | 'designer' | 'qa' | 'templates' | 'stakeholder'
+
+const SECTION_META: { key: SectionKey; title: string; badges: string[] }[] = [
+  { key: 'roles', title: 'Roles & Access', badges: ['PM', 'Dev', 'Designer'] },
+  { key: 'flow', title: 'Flow & Logic', badges: ['Dev', 'Designer', 'QA'] },
+  { key: 'engineer', title: 'Engineer Section', badges: ['Dev'] },
+  { key: 'designer', title: 'Designer Section', badges: ['Designer'] },
+  { key: 'qa', title: 'QA Section', badges: ['QA'] },
+  { key: 'templates', title: 'Template Artifacts', badges: ['Dev', 'Designer', 'QA'] },
+  { key: 'stakeholder', title: 'Stakeholder View', badges: ['Business'] },
+]
 
 export function LivingDocument({ foundationData, sectionStates, sessionState, onCopySection }: Props) {
   const isReady = sessionState === 'ready' || sessionState === 'done'
 
   return (
     <div className="space-y-3">
-      {/* Section 1: Foundation — always visible, always first */}
+      {/* Section 1: Foundation */}
       <SectionCard
         title="Foundation"
-        icon="📌"
+        icon={ICONS.foundation.svg}
+        iconLabel={ICONS.foundation.label}
         badges={['PM', 'Semua']}
         status={sectionStates.foundation}
         onCopy={foundationData ? () => onCopySection('foundation', JSON.stringify(foundationData, null, 2)) : undefined}
@@ -37,22 +74,27 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
         {foundationData && <FoundationSection data={foundationData} />}
       </SectionCard>
 
-      {/* Sections 2–8: disabled until session is ready; no onGenerate prop yet */}
-      {SECTION_META.map(({ key, icon, title, badges }) => (
-        <SectionCard
-          key={key}
-          title={title}
-          icon={icon}
-          badges={[...badges]}
-          status={sectionStates[key as keyof SectionStates]}
-          disabled={!isReady}
-        />
-      ))}
+      {/* Sections 2–8: disabled until ready */}
+      {SECTION_META.map(({ key, title, badges }) => {
+        const iconData = ICONS[key]
+        return (
+          <SectionCard
+            key={key}
+            title={title}
+            icon={iconData.svg}
+            iconLabel={iconData.label}
+            badges={[...badges]}
+            status={sectionStates[key as keyof SectionStates]}
+            disabled={!isReady}
+          />
+        )
+      })}
 
-      {/* Section 9: Export — always last */}
+      {/* Section 9: Export */}
       <SectionCard
         title="Output & Export"
-        icon="🚀"
+        icon={ICONS.export.svg}
+        iconLabel={ICONS.export.label}
         badges={['Semua']}
         status="empty"
       >

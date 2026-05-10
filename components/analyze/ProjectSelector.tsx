@@ -99,8 +99,8 @@ export function ProjectSelector({ onSelect }: Props) {
         </div>
       )}
 
-      {error && (
-        <p className="text-red-400 text-sm">{error}</p>
+{error && (
+        <p role="alert" aria-live="polite" className="text-red-400 text-sm">{error}</p>
       )}
 
       {loading && <p className="text-slate-500 text-sm">Memuat project...</p>}
@@ -109,12 +109,15 @@ export function ProjectSelector({ onSelect }: Props) {
         <p className="text-slate-500 text-sm">Belum ada project. Buat project baru untuk mulai.</p>
       )}
 
-      <div className="grid gap-2">
+<div className="grid gap-2" role="listbox" aria-label="Daftar project">
         {projects.map(project => (
           <button
             key={project.id}
+            role="option"
+            aria-selected="false"
+            tabIndex={0}
             onClick={() => onSelect(project)}
-            className="text-left border border-slate-700 hover:border-teal-700 bg-slate-900 hover:bg-slate-800 rounded-xl p-4 transition-colors group"
+            className="text-left border border-slate-700 hover:border-teal-700 bg-slate-900 hover:bg-slate-800 rounded-xl p-4 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           >
             <div className="text-slate-100 font-medium group-hover:text-teal-300 transition-colors">
               {project.name}

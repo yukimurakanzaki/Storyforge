@@ -18,7 +18,8 @@ const STATUS_COLORS: Record<SectionStatus, string> = {
 
 type Props = {
   title: string
-  icon: string
+  icon: string          // SVG HTML string
+  iconLabel: string     // accessible label for the icon
   badges: string[]
   status: SectionStatus
   disabled?: boolean
@@ -27,7 +28,7 @@ type Props = {
   children?: React.ReactNode
 }
 
-export function SectionCard({ title, icon, badges, status, disabled, onGenerate, onCopy, children }: Props) {
+export function SectionCard({ title, icon, iconLabel, badges, status, disabled, onGenerate, onCopy, children }: Props) {
   const id = useId()
   const panelId = `section-panel-${id}`
   const [open, setOpen] = useState(status === 'done' || status === 'stale')
@@ -41,11 +42,15 @@ export function SectionCard({ title, icon, badges, status, disabled, onGenerate,
       <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-3 flex-1 text-left"
+          className="flex items-center gap-3 flex-1 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-inset"
           aria-expanded={open}
           aria-controls={panelId}
         >
-          <span className="text-lg">{icon}</span>
+          <span
+            className="text-slate-300 flex-shrink-0"
+            dangerouslySetInnerHTML={{ __html: icon }}
+            aria-hidden="true"
+          />
           <span className="text-slate-100 font-medium text-sm">{title}</span>
           <div className="flex gap-1 flex-wrap">
             {badges.map(b => (
@@ -57,7 +62,7 @@ export function SectionCard({ title, icon, badges, status, disabled, onGenerate,
           <span className={`text-xs px-2 py-0.5 rounded ml-auto ${STATUS_COLORS[status]}`}>
             {STATUS_LABELS[status]}
           </span>
-          <span className="text-slate-600 text-xs ml-2">{open ? '▲' : '▼'}</span>
+          <span className="text-slate-600 text-xs ml-2" aria-hidden="true">{open ? '▲' : '▼'}</span>
         </button>
 
         <div className="flex gap-2 flex-shrink-0">
@@ -86,8 +91,10 @@ export function SectionCard({ title, icon, badges, status, disabled, onGenerate,
       {open && (
         <div id={panelId} className="px-4 pb-4">
           {children ?? (
-            <p className="text-slate-600 text-sm italic">
-              {disabled ? 'Tersedia setelah readiness score ≥ 80.' : 'Belum dibuat.'}
+            <p className="text-slate-500 text-sm italic">
+              {disabled
+                ? 'Score ≥ 80 untuk membuka bagian ini. Mulai analysis atau jawab pertanyaan klarifikasi untuk meningkatkan readiness.'
+                : 'Belum dibuat.'}
             </p>
           )}
         </div>
