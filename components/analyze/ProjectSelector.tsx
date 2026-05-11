@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Project } from '@/types'
 import { fetchProjects, createProject, updateProjectContext } from '@/lib/projects'
 import { ProjectContextForm } from './ProjectContextForm'
@@ -15,6 +15,7 @@ export function ProjectSelector({ onSelect }: Props) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [showContextForm, setShowContextForm] = useState<Project | null>(null)
+  const announcerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchProjects()
@@ -22,6 +23,15 @@ export function ProjectSelector({ onSelect }: Props) {
       .catch(() => setError('Gagal memuat project. Muat ulang halaman.'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Broad state announcer — fires on every significant state change
+  useEffect(() => {
+    if (!announcerRef.current) return
+    if (loading) announcerRef.current.textContent = 'Memuat project...'
+    else if (error) announcerRef.current.textContent = error
+    else if (projects.length === 0) announcerRef.current.textContent = 'Belum ada project. Buat project baru untuk mulai.'
+    else announcerRef.current.textContent = `${projects.length} project ditemukan. Gunakan tab untuk navigasi dan enter untuk memilih.`
+  }, [loading, error, projects.length])
 
   const handleCreate = async () => {
     if (!newName.trim()) return
@@ -62,8 +72,16 @@ export function ProjectSelector({ onSelect }: Props) {
     )
   }
 
-  return (
+return (
     <div className="space-y-4">
+      {/* Screen reader announcer for loading/error/empty states */}
+      <div
+        ref={announcerRef}
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
+
       <div className="flex items-center justify-between">
         <h2 className="text-slate-100 font-semibold">Pilih Project</h2>
         <button

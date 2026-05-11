@@ -38,23 +38,23 @@ export function SectionCard({ title, icon, iconLabel, badges, status, disabled, 
   }, [status])
 
   return (
-    <div className="border border-slate-700 rounded-xl bg-slate-900/50">
+    <div className="border border-border rounded-xl bg-card/50">
       <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-3 flex-1 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-inset"
+          className="flex items-center gap-3 flex-1 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
           aria-expanded={open}
           aria-controls={panelId}
         >
           <span
-            className="text-slate-300 flex-shrink-0"
+            className="text-muted-foreground flex-shrink-0"
             dangerouslySetInnerHTML={{ __html: icon }}
             aria-hidden="true"
           />
-          <span className="text-slate-100 font-medium text-sm">{title}</span>
+          <span className="text-foreground font-medium text-sm">{title}</span>
           <div className="flex gap-1 flex-wrap">
             {badges.map(b => (
-              <span key={b} className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">
+              <span key={b} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
                 {b}
               </span>
             ))}
@@ -62,7 +62,7 @@ export function SectionCard({ title, icon, iconLabel, badges, status, disabled, 
           <span className={`text-xs px-2 py-0.5 rounded ml-auto ${STATUS_COLORS[status]}`}>
             {STATUS_LABELS[status]}
           </span>
-          <span className="text-slate-600 text-xs ml-2" aria-hidden="true">{open ? '▲' : '▼'}</span>
+          <span className="text-muted-foreground text-xs ml-2" aria-hidden="true">{open ? '▲' : '▼'}</span>
         </button>
 
         <div className="flex gap-2 flex-shrink-0">
@@ -70,7 +70,7 @@ export function SectionCard({ title, icon, iconLabel, badges, status, disabled, 
             <button
               onClick={onCopy}
               aria-label={`Salin ${title}`}
-              className="text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 border border-slate-700 rounded"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-border rounded"
             >
               Salin
             </button>
@@ -80,7 +80,7 @@ export function SectionCard({ title, icon, iconLabel, badges, status, disabled, 
               onClick={onGenerate}
               disabled={disabled || status === 'generating'}
               aria-label={status === 'stale' ? `Perbarui ${title}` : `Buat ${title}`}
-              className="text-xs text-white bg-teal-700 hover:bg-teal-600 disabled:bg-slate-700 disabled:text-slate-500 px-3 py-1 rounded transition-colors"
+              className="text-xs text-primary-foreground bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground px-3 py-1 rounded transition-colors"
             >
               {status === 'stale' ? 'Perbarui' : 'Buat'}
             </button>
@@ -91,7 +91,7 @@ export function SectionCard({ title, icon, iconLabel, badges, status, disabled, 
       {open && (
         <div id={panelId} className="px-4 pb-4">
           {children ?? (
-            <p className="text-slate-500 text-sm italic">
+            <p className="text-muted-foreground text-sm italic">
               {disabled
                 ? 'Score ≥ 80 untuk membuka bagian ini. Mulai analysis atau jawab pertanyaan klarifikasi untuk meningkatkan readiness.'
                 : 'Belum dibuat.'}

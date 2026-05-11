@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: #0f172a;      /* slate-900 */
+    --foreground: #f1f5f9;      /* slate-100 */
+    --card: #1e293b;            /* slate-800 */
+    --card-foreground: #f1f5f9; /* slate-100 */
+    --border: #334155;          /* slate-700 */
+    --input: #334155;           /* slate-700 */
+    --primary: #14b8a6;         /* teal-500 */
+    --primary-foreground: #ffffff;
+    --secondary: #334155;       /* slate-700 */
+    --secondary-foreground: #f1f5f9;
+    --accent: #f97316;          /* orange-500 */
+    --accent-foreground: #ffffff;
+    --muted: #334155;           /* slate-700 */
+    --muted-foreground: #94a3b8; /* slate-400 */
+    --destructive: #ef4444;     /* red-500 */
+    --ring: #14b8a6;            /* teal-500 */
+    --radius: 0.5rem;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
