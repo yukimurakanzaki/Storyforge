@@ -161,3 +161,10 @@ export type FoundationData = {
   assumptions: string[]
   out_of_scope: string[]
 }
+
+export type LivingDocumentProps = {
+  foundationData: FoundationData | null
+  sectionStates: SectionStates
+  sessionState: SessionState
+  onCopySection: (section: string, content: string) => void
+}

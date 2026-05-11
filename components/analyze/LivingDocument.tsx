@@ -1,9 +1,9 @@
 'use client'
 
 import { SectionCard } from './SectionCard'
+import { SectionStates, SessionState, LivingDocumentProps } from '@/types'
 import { FoundationSection } from './FoundationSection'
 import type { FoundationData } from '@/types'
-import { SectionStates, SessionState } from '@/types'
 
 // SVG icons with aria-hidden (decorative, not semantic)
 const ICONS: Record<string, { svg: string; label: string }> = {
@@ -57,7 +57,7 @@ const SECTION_META: { key: SectionKey; title: string; badges: string[] }[] = [
   { key: 'stakeholder', title: 'Stakeholder View', badges: ['Business'] },
 ]
 
-export function LivingDocument({ foundationData, sectionStates, sessionState, onCopySection }: Props) {
+export function LivingDocument({ foundationData, sectionStates, sessionState, onCopySection }: LivingDocumentProps) {
   const isReady = sessionState === 'ready' || sessionState === 'done'
 
   return (
