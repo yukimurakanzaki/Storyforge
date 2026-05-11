@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-05-09 (WIB)
-**Status:** Pre-MVP, awesome-wescoff merge conflict resolved and verification green
+**Last Updated:** 2026-05-10 (WIB)
+**Status:** Pre-MVP, password auth + admin role implementation complete
 
 ---
 
@@ -20,8 +20,8 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]] — **LATEST**
-- [[03-Sessions/2026-05-04-impeccable-audit-fixes|2026-05-04: Impeccable Audit + Full Fix Pass]] — **LATEST**
+- [[03-Sessions/2026-05-10-password-auth-admin-beta|2026-05-10: Password Auth + Admin Beta Magic Link]] — **LATEST**
+- [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]]
 - [[03-Sessions/2026-05-01-output-trust-layer|2026-05-01: Output Trust Layer]]
 - [[03-Sessions/2026-04-29-auth-magic-link-fix|2026-04-29: Auth Magic Link Fix]] — **LATEST**
 - [[03-Sessions/2026-04-29-session-saved-after-guest-mode-push|2026-04-29: Session Saved After Guest Mode Push]] — **LATEST**
@@ -81,15 +81,18 @@
 - ✅ **Trust layer validation green** — `npm test`, TypeScript, production build, and Playwright E2E all pass
 - ✅ **Awesome Wescoff merge conflict resolved** — Living document/project conflicts resolved from `claude/awesome-wescoff-d9cc26`
 - ✅ **Merge verification green** — `npx tsc --noEmit`, `npm test`, and `npm run build` pass after conflict resolution
+- ✅ **Password auth conversion** — Signup/login migrated from magic link to email/password
+- ✅ **Shared password validation** — `lib/auth/password.ts` shared across signup + set-password
+- ✅ **Admin role helper** — `lib/auth/admin.ts` with `getAdminStatus()` for future admin tooling
+- ✅ **Profile role migration** — `008_profile_roles.sql` ready for Supabase
 
 ### In Progress 🔄
 
-- 🔄 **Supabase migration for trust layer** — Run `005_output_trust_layer.sql` before production feedback capture
+- 🔄 **Run Supabase migrations** — `005_output_trust_layer.sql` + `008_profile_roles.sql`
 - 🔄 **Register domain storyforge.id** — Next action
 - 🔄 **Setup email forwarding** — privacy@storyforge.id, hello@storyforge.id (via Cloudflare)
 - 🔄 **Message William** — Share beta link, reactivate commitment
 - 🔄 **Compliance pages** — Publish /privacy, /terms on domain
-- 🔄 **Supabase redirect allowlist** — Add deployed `/api/auth/callback` URL before real-user magic-link testing
 
 ### Blocked ⬜
 
