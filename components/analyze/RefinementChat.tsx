@@ -46,6 +46,129 @@ function AIAvatar() {
   )
 }
 
+// ── Mobile Analysis Panel ─────────────────────────────────────────────
+interface MobilePanelProps {
+  result?: AnalysisResult
+  readinessStyle: { label: string; cls: string } | null
+  qaVersion: number
+  hasUnanswered: boolean
+  qaAnswers: RefinementChatProps['qaAnswers']
+  resolvedIndices: RefinementChatProps['resolvedIndices']
+  isRefining: boolean
+  onQAAnswerChange: RefinementChatProps['onQAAnswerChange']
+  onQAOutOfScopeChange: RefinementChatProps['onQAOutOfScopeChange']
+  onSubmitQA: RefinementChatProps['onSubmitQA']
+}
+
+function MobileAnalysisPanel({
+  result,
+  readinessStyle,
+  qaVersion,
+  hasUnanswered,
+  qaAnswers,
+  resolvedIndices,
+  isRefining,
+  onQAAnswerChange,
+  onQAOutOfScopeChange,
+  onSubmitQA,
+}: MobilePanelProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const readinessScore = result?.readinessScore ?? 0
+
+  return (
+    <>
+      {/* Floating readiness trigger — visible on mobile */}
+      {result && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full border px-3 py-2 shadow-lg backdrop-blur bg-black/70 border-white/20 text-white text-xs font-medium hover:bg-black/80 transition-colors cursor-pointer"
+          aria-label="Buka panel analisis"
+        >
+          <span className="text-base font-black tabular-nums">{readinessScore}</span>
+          <span className="opacity-70">/100</span>
+          <span className="opacity-50">·</span>
+          <span>{readinessStyle?.label ?? '...'}</span>
+          <svg aria-hidden="true" className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M16.28 11.47a.75.75 0 0 1 0 1.06l-7.5 7.5a.75.75 0 0 1-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 0 1 1.06-1.06l7.5 7.5Z" clipRule="evenodd" /></svg>
+        </button>
+      )}
+
+      {/* Bottom sheet */}
+      {isOpen && result && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={() => setIsOpen(false)}
+          aria-modal="true"
+          role="dialog"
+          aria-label="Panel Analisis"
+        >
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 rounded-t-2xl p-4 pb-8 max-h-[75vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="w-10 h-1 bg-slate-600 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white">Analisis</h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Tutup panel"
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
+              </button>
+            </div>
+
+            {/* Readiness badge */}
+            <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 mb-4 ${readinessStyle?.cls}`}>
+              <span className="text-xl font-black tabular-nums leading-none">{result.readinessScore}</span>
+              <span className="text-xs opacity-60">/100</span>
+              <span className="opacity-25 mx-0.5">·</span>
+              <span className="text-sm font-semibold">{readinessStyle?.label}</span>
+            </div>
+
+            {/* Gap list */}
+            {result.gapList.length > 0 && (
+              <CollapsibleSection title="Gap Analysis" count={result.gapList.length}>
+                <ul className="flex flex-col gap-2">
+                  {result.gapList.map((gap, idx) => (
+                    <GapItem
+                      key={idx}
+                      gap={gap}
+                      index={idx}
+                      canSubmitFeedback={false}
+                    />
+                  ))}
+                </ul>
+              </CollapsibleSection>
+            )}
+
+            {/* QA */}
+            {result.clarificationQuestions.length > 0 && (
+              <CollapsibleSection
+                key={qaVersion}
+                title="Pertanyaan Klarifikasi"
+                count={result.clarificationQuestions.length}
+                defaultOpen={hasUnanswered}
+              >
+                <QACards
+                  questions={result.clarificationQuestions}
+                  qaAnswers={qaAnswers}
+                  resolvedIndices={resolvedIndices}
+                  isLoading={isRefining}
+                  onAnswerChange={onQAAnswerChange}
+                  onOutOfScopeChange={onQAOutOfScopeChange}
+                  onSubmit={onSubmitQA}
+                />
+              </CollapsibleSection>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function RefinementChat({
   messages,
   result,
@@ -133,7 +256,7 @@ export function RefinementChat({
   const readinessStyle = result ? getReadinessStyle(result.readinessScore) : null
 
   return (
-    <div className="flex flex-1 min-h-0 min-w-0">
+    <div className="flex flex-1 min-h-0 min-w-0 relative">
 
       {/* ── Middle: Chat ─────────────────────────────────── */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
@@ -247,6 +370,9 @@ export function RefinementChat({
           </div>
         )}
       </div>
+
+      {/* Mobile: floating readiness badge + bottom sheet */}
+      <MobileAnalysisPanel result={result} readinessStyle={readinessStyle} qaVersion={qaVersion} hasUnanswered={hasUnanswered} qaAnswers={qaAnswers} resolvedIndices={resolvedIndices} isRefining={isRefining} onQAAnswerChange={onQAAnswerChange} onQAOutOfScopeChange={onQAOutOfScopeChange} onSubmitQA={onSubmitQA} />
 
       {/* ── Right: Analysis panel ────────────────────────── */}
       {result && (

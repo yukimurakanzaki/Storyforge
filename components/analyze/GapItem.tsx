@@ -198,13 +198,14 @@ const disabledReason = analysisId
       </div>
 
       {isModalOpen && (
-        <div
+<div
           className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/40 px-4"
+          onClick={closeModal}
           role="dialog"
           aria-modal="true"
           aria-labelledby={`gap-feedback-title-${index}`}
         >
-          <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-5 shadow-xl" onClick={e => e.stopPropagation()}>
             <h4
               id={`gap-feedback-title-${index}`}
               className="text-base font-semibold text-gray-900"
