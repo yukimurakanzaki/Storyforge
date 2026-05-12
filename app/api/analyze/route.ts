@@ -1,18 +1,17 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
+import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
+import { sseEvent, createSSEStream } from '@/lib/sse'
+import type { ProjectContext } from '@/types'
 
 export const runtime = 'nodejs'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
 
 const MAX_ANALYZE_TEXT_CHARS = 150_000
 
 type AnalyzeValidationResult =
-  | { valid: true; text: string }
+  | { valid: true; text: string; projectId: string | null }
   | { valid: false; error: string; status: number }
 
 export function validateAnalyzePayload(body: unknown): AnalyzeValidationResult {
@@ -29,7 +28,15 @@ export function validateAnalyzePayload(body: unknown): AnalyzeValidationResult {
     return { valid: false, error: 'BRD text too large', status: 413 }
   }
 
-  return { valid: true, text }
+  const rawProjectId = (body as { projectId?: unknown }).projectId
+  const projectId: string | null =
+    rawProjectId === null || rawProjectId === undefined
+      ? null
+      : typeof rawProjectId === 'string' && rawProjectId.trim().length > 0
+        ? rawProjectId.trim()
+        : null
+
+  return { valid: true, text, projectId }
 }
 
 function jsonResponse(
@@ -91,8 +98,40 @@ Fokus pencarian gap pada:
 - Dependensi teknis atau pihak ketiga yang tidak disebutkan
 - Asumsi yang tidak didokumentasikan`
 
+export function buildSystemPromptWithContext(projectContext?: {
+  name: string
+  context: ProjectContext
+}): string {
+  if (!projectContext) return SYSTEM_PROMPT
+
+  const { name, context } = projectContext
+  const lines: string[] = [`KONTEKS PROJECT: ${name}`, '']
+
+  // Business context
+  if (context.business.description) lines.push(`Deskripsi Bisnis: ${context.business.description}`)
+  if (context.business.domain) lines.push(`Domain: ${context.business.domain}`)
+  if (context.business.targetUsers.length > 0) lines.push(`Target Users: ${context.business.targetUsers.join(', ')}`)
+  if (context.business.compliance.length > 0) lines.push(`Compliance: ${context.business.compliance.join(', ')}`)
+
+  // Technical context
+  if (context.technical.frontend) lines.push(`Frontend: ${context.technical.frontend}`)
+  if (context.technical.backend) lines.push(`Backend: ${context.technical.backend}`)
+  if (context.technical.existingSystems.length > 0) lines.push(`Existing Systems: ${context.technical.existingSystems.join(', ')}`)
+  if (context.technical.constraints.length > 0) lines.push(`Constraints: ${context.technical.constraints.join(', ')}`)
+
+  return `${SYSTEM_PROMPT}\n\n${lines.join('\n')}`
+}
+
 export async function POST(request: NextRequest) {
   const mode = request.headers.get('x-guest-mode') === '1' ? 'guest' : 'user'
+
+  // Hoist to function scope so they're accessible in the background IIFE
+  let supabase: Awaited<ReturnType<typeof createClient>> | undefined
+  let user: { id: string } | null = null
+  let sessionId: string | undefined
+  let wordCount: number | undefined
+  let startTime: number | undefined
+  let projectContext: { name: string; context: ProjectContext } | undefined
 
   if (mode === 'guest') {
     // Server-side rate limit for unauthenticated (guest) requests
@@ -106,12 +145,27 @@ export async function POST(request: NextRequest) {
     }
   } else {
     // Require a valid authenticated session for non-guest requests
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    supabase = await createClient()
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
       return jsonResponse(
         { error: 'Unauthorized', message: 'Login diperlukan.', mode },
         { status: 401, mode }
+      )
+    }
+    user = authUser
+
+    // Generate a session ID for event logging
+    sessionId = crypto.randomUUID()
+
+    // Check usage limit before proceeding
+    const usageResult = await checkUsage(supabase, user.id)
+    if (!usageResult.allowed) {
+      const headers = new Headers()
+      headers.set('X-Limit-Reached', 'true')
+      return jsonResponse(
+        { error: 'Limit reached', count: usageResult.count, limit: usageResult.limit, plan: usageResult.plan, mode },
+        { status: 429, mode, headers }
       )
     }
   }
@@ -138,41 +192,117 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  try {
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      temperature: 0,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
-        },
-      ],
-    })
+  // Server-side Pro plan check: fetch project context only for Pro users
+  if (validation.projectId && supabase && user) {
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', user.id)
+      .single()
 
-    const text_content = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    const plan = (sub?.plan as 'free' | 'pro') || 'free'
 
-    const cleaned = text_content
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim()
+    if (plan === 'pro') {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('name, context')
+        .eq('id', validation.projectId)
+        .single()  // RLS enforced — returns null if not owned by user
 
-    const parsed = JSON.parse(cleaned)
-    return jsonResponse(parsed, { status: 200, mode })
-  } catch (err) {
-    console.error('[api/analyze] error:', err)
-    return jsonResponse(
-      {
-        error: 'Terjadi kesalahan. Coba lagi.',
-        message: 'Terjadi kesalahan. Coba lagi.',
-        mode,
-      },
-      { status: 500, mode }
-    )
+      if (project) {
+        projectContext = {
+          name: project.name as string,
+          context: project.context as ProjectContext,
+        }
+      }
+    }
+    // If plan === 'free' or project not found: projectContext stays undefined
   }
+
+  // Log analysis_started and record start time for authenticated users
+  if (user && supabase && sessionId !== undefined) {
+    wordCount = validation.text.split(/\s+/).length
+    await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
+    startTime = Date.now()
+  }
+
+  // --- Start SSE stream ---
+  const { readable, enqueue, close, error: streamError } = createSSEStream()
+
+  const responseHeaders = new Headers({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Mode': mode,
+  })
+
+  // Run streaming in background — do NOT await before returning Response
+  ;(async () => {
+    let accumulated = ''
+    try {
+      const stream = anthropic.messages.stream({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4096,
+        temperature: 0,
+        system: buildSystemPromptWithContext(projectContext),
+        messages: [
+          {
+            role: 'user',
+            content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
+          },
+        ],
+      })
+
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          accumulated += event.delta.text
+          enqueue(sseEvent('delta', { text: event.delta.text }))
+        }
+      }
+
+      // Clean and parse accumulated JSON
+      const cleaned = accumulated
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim()
+
+      if (!cleaned) {
+        console.error('[api/analyze] empty response from Anthropic')
+        streamError('AI returned empty response. Coba lagi.')
+        return
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(cleaned)
+      } catch (parseErr) {
+        console.error('[api/analyze] JSON parse failed, raw:', accumulated.slice(0, 200))
+        streamError('Terjadi kesalahan. Coba lagi.')
+        return
+      }
+
+      // Increment usage and log completion — fire-and-forget so failures don't kill the done event
+      if (user && supabase && sessionId !== undefined) {
+        incrementUsage(supabase, user.id).catch(e => console.error('[api/analyze] incrementUsage failed:', e))
+        logAnalysisEvent(
+          supabase,
+          user.id,
+          sessionId,
+          'analysis_completed',
+          wordCount,
+          startTime !== undefined ? Date.now() - startTime : undefined
+        ).catch(e => console.error('[api/analyze] logEvent failed:', e))
+      }
+
+      enqueue(sseEvent('done', parsed))
+      close()
+    } catch (err) {
+      console.error('[api/analyze] stream error:', err)
+      streamError('Terjadi kesalahan. Coba lagi.')
+    }
+  })()
+
+  return new Response(readable, { headers: responseHeaders })
 }

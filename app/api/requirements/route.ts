@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { anthropic } from '@/lib/anthropic'
+import type Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { AnalysisResult, ChatMessage } from '@/types'
@@ -8,8 +9,6 @@ export const runtime = 'nodejs'
 
 const MAX_BRD_CHARS = 150_000
 const MAX_MESSAGES = 30
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const SYSTEM_PROMPT = `Kamu adalah senior product analyst yang mengubah BRD dan hasil klarifikasi menjadi User Stories siap pakai.
 
@@ -123,7 +122,7 @@ export async function POST(request: NextRequest) {
   const userMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS:\n- Readiness Score: ${typedAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nDISKUSI KLARIFIKASI:\n${conversationHistory}\n\nBuat User Stories lengkap berdasarkan semua konteks di atas. Sertakan generatedAt dengan timestamp sekarang dalam ISO 8601.`
 
   try {
-    const message = await client.messages.create({
+    const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8192,
       temperature: 0,

@@ -30,6 +30,7 @@ describe('validateAnalyzePayload', () => {
     expect(validateAnalyzePayload({ text: 'Valid BRD' })).toEqual({
       valid: true,
       text: 'Valid BRD',
+      projectId: null,
     })
   })
 

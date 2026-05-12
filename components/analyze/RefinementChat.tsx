@@ -284,13 +284,21 @@ export function RefinementChat({
                         : 'bg-gray-100 text-gray-800',
                     ].join(' ')}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap">
+                      {msg.content}
+                      {msg.isStreaming && (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 align-middle animate-pulse"
+                        />
+                      )}
+                    </p>
                   </div>
                 </div>
               ))}
 
-              {/* Typing indicator */}
-              {isRefining && (
+              {/* Typing indicator — only shown when not already streaming a message */}
+              {isRefining && !messages.some(m => m.isStreaming) && (
                 <div className="flex gap-2 justify-start">
                   <AIAvatar />
                   <div className="bg-gray-100 rounded-2xl px-4 py-3">
