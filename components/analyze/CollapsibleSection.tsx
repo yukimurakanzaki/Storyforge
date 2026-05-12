@@ -18,15 +18,20 @@ export function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
+  const toggleId = `collapsible-${title.replace(/\s+/g, '-').toLowerCase()}`
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 mb-2 overflow-hidden">
+    <div className="rounded-lg border border-border bg-muted mb-2 overflow-hidden">
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-100 transition-colors cursor-pointer"
+        aria-expanded={isOpen}
+        aria-controls={toggleId}
+        id={`toggle-${toggleId}`}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
       >
         <svg
-          className={`w-3 h-3 text-gray-400 flex-shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+          className={`w-3 h-3 text-muted-foreground flex-shrink-0 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
           fill="currentColor"
           viewBox="0 0 24 24"
         >
@@ -36,15 +41,15 @@ export function CollapsibleSection({
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</span>
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wide">{title}</span>
         {count !== undefined && (
-          <span className="text-xs text-gray-400">· {count}</span>
+          <span className="text-xs text-muted-foreground">· {count}</span>
         )}
         {badge && <span className="ml-auto">{badge}</span>}
       </button>
 
       {isOpen && (
-        <div className="border-t border-gray-200 bg-white px-4 py-3">
+        <div id={toggleId} className="border-t border-border bg-card px-4 py-3">
           {children}
         </div>
       )}

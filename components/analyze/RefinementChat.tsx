@@ -239,7 +239,7 @@ export function RefinementChat({
                 onClick={handleSend}
                 disabled={!canSend}
                 aria-label="Kirim pesan"
-                className="rounded-xl bg-teal-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="rounded-xl bg-teal-600 text-white px-4 py-3 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer min-h-11"
               >
                 Kirim
               </button>

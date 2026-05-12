@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import type { GapItem as GapItemType } from '@/types'
 import { Button } from '@/components/ui/Button'
 
@@ -114,9 +114,35 @@ export function GapItem({
     }
   }
 
-  const disabledReason = analysisId
+const disabledReason = analysisId
     ? 'Login untuk kirim feedback'
     : 'Simpan analisis untuk kirim feedback'
+
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false)
+  }, [])
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isModalOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isModalOpen, closeModal])
+
+  // Focus trap: keep focus inside modal when open
+  useEffect(() => {
+    if (!isModalOpen) return
+    const dialog = document.getElementById(`gap-dialog-${index}`)
+    if (!dialog) return
+    const focusable = dialog.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    if (focusable.length === 0) return
+    focusable[0].focus()
+  }, [isModalOpen, index])
 
   return (
     <li
@@ -146,8 +172,8 @@ export function GapItem({
               Dasar: {gap.reference}
             </p>
           )}
-          {sent && (
-            <p className="mt-2 text-xs font-medium text-green-700">
+{sent && (
+            <p role="status" aria-live="polite" className="mt-2 text-xs font-medium text-green-700">
               Feedback terkirim ✓
             </p>
           )}

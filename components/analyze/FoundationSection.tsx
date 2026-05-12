@@ -5,9 +5,9 @@ import { FoundationData, Gap, QAEntry } from '@/types'
 export type { FoundationData }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  high: 'border-red-700 bg-red-900/20 text-red-300',
-  medium: 'border-amber-700 bg-amber-900/20 text-amber-300',
-  low: 'border-slate-700 bg-slate-800/50 text-slate-400',
+  high: 'border-red-500/60 bg-red-500/10 text-red-300',
+  medium: 'border-amber-500/60 bg-amber-500/10 text-amber-300',
+  low: 'border-slate-600/60 bg-slate-700/30 text-slate-300',
 }
 
 type Props = {
@@ -38,7 +38,7 @@ export function FoundationSection({ data }: Props) {
       {/* BRD Summary */}
       {data.brd_summary && (
         <div>
-          <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">Ringkasan BRD</div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Ringkasan BRD</div>
           <p className="text-slate-300 text-sm leading-relaxed">{data.brd_summary}</p>
         </div>
       )}
@@ -46,7 +46,7 @@ export function FoundationSection({ data }: Props) {
       {/* Gap list */}
       {data.gap_list.length > 0 && (
         <div>
-          <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
             Gap ({data.gap_list.length})
           </div>
           <div className="space-y-2">
@@ -65,7 +65,7 @@ export function FoundationSection({ data }: Props) {
       {/* Assumptions */}
       {data.assumptions.length > 0 && (
         <div>
-          <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
             Asumsi AI ({data.assumptions.length})
           </div>
           <ul className="space-y-1">
@@ -82,7 +82,7 @@ export function FoundationSection({ data }: Props) {
       {/* Out of Scope */}
       {data.out_of_scope.length > 0 && (
         <div>
-          <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
             Di Luar Scope ({data.out_of_scope.length})
           </div>
           <ul className="space-y-1">
@@ -102,12 +102,22 @@ export function FoundationSection({ data }: Props) {
           <button
             onClick={() => setQaOpen(o => !o)}
             aria-expanded={qaOpen}
-            className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1 hover:text-slate-300 transition-colors"
+            aria-controls="qa-log-content"
+            id="qa-log-toggle"
+            className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 hover:text-foreground transition-colors"
           >
-            Log Q&A ({data.qa_log.length} pertanyaan) {qaOpen ? '▲' : '▼'}
+            <svg
+              aria-hidden="true"
+              className={`w-3 h-3 transition-transform duration-150 ${qaOpen ? 'rotate-90' : ''}`}
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path fillRule="evenodd" d="M16.28 11.47a.75.75 0 0 1 0 1.06l-7.5 7.5a.75.75 0 0 1-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 0 1 1.06-1.06l7.5 7.5Z" clipRule="evenodd" />
+            </svg>
+            Log Q&A ({data.qa_log.length} pertanyaan)
           </button>
           {qaOpen && (
-            <div className="mt-2 space-y-3">
+            <div id="qa-log-content" className="mt-2 space-y-3">
               {data.qa_log.map((entry: QAEntry, i: number) => (
                 <div key={`qa-${entry.round}-${i}`} className="bg-slate-800/50 rounded-lg p-3">
                   <div className="text-xs text-slate-500 mb-1">Ronde {entry.round}</div>
