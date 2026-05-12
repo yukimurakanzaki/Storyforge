@@ -56,26 +56,35 @@ export async function incrementUsage(
   supabase: SupabaseClient,
   userId: string
 ): Promise<void> {
-  // Increment counter
+  const now = new Date()
+  const resetAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+  // Check if a row already exists for this user
   const { data: current } = await supabase
     .from('usage_counters')
     .select('count, first_analysis_at')
     .eq('user_id', userId)
     .single()
 
-  const updates: Record<string, unknown> = {
-    count: (current?.count || 0) + 1,
-    updated_at: new Date().toISOString(),
+  if (!current) {
+    // First-time user: INSERT a new row with count=1
+    await supabase.from('usage_counters').insert({
+      user_id: userId,
+      count: 1,
+      first_analysis_at: now.toISOString(),
+      reset_at: resetAt.toISOString(),
+      updated_at: now.toISOString(),
+    })
+  } else {
+    // Existing user: UPDATE with incremented count
+    await supabase
+      .from('usage_counters')
+      .update({
+        count: current.count + 1,
+        updated_at: now.toISOString(),
+      })
+      .eq('user_id', userId)
   }
-
-  if (!current?.first_analysis_at) {
-    updates.first_analysis_at = new Date().toISOString()
-  }
-
-  await supabase
-    .from('usage_counters')
-    .update(updates)
-    .eq('user_id', userId)
 }
 
 export async function logAnalysisEvent(

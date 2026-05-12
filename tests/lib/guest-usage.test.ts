@@ -31,27 +31,27 @@ beforeEach(() => {
 
 describe('guest usage helpers', () => {
   it('allows a fresh guest to analyze', () => {
-    expect(canGuestAnalyze()).toEqual({ allowed: true, count: 0, limit: 5 })
+    expect(canGuestAnalyze()).toEqual({ allowed: true, count: 0, limit: 3 })
   })
 
   it('blocks guests at the free limit', () => {
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < 3; i += 1) {
       incrementGuestUsage()
     }
 
-    expect(canGuestAnalyze()).toEqual({ allowed: false, count: 5, limit: 5 })
+    expect(canGuestAnalyze()).toEqual({ allowed: false, count: 3, limit: 3 })
   })
 
   it('resets expired guest usage windows', () => {
     localStorageMock.setItem(
       GUEST_USAGE_STORAGE_KEY,
       JSON.stringify({
-        count: 5,
+        count: 3,
         resetAt: new Date(Date.now() - 60_000).toISOString(),
       })
     )
 
-    expect(readGuestUsage()).toEqual({ count: 0, limit: 5 })
+    expect(readGuestUsage()).toEqual({ count: 0, limit: 3 })
     expect(canGuestAnalyze().allowed).toBe(true)
   })
 })

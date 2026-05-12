@@ -1,6 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
+import { sseEvent, createSSEStream } from '@/lib/sse'
 import type { AnalysisResult, ChatMessage, QAAnswer } from '@/types'
 import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 
@@ -8,8 +9,6 @@ export const runtime = 'nodejs'
 
 const MAX_BRD_CHARS = 150_000
 const MAX_MESSAGES = 30
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 function buildQAContext(questions: string[], qaAnswers: QAAnswer[]): string {
   if (questions.length === 0) return ''
@@ -140,37 +139,58 @@ export async function POST(request: NextRequest) {
     content: m.content,
   }))
 
-  try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 6000,
-      temperature: 0,
-      system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),
-      messages: anthropicMessages,
-    })
+  // --- Start SSE stream ---
+  const { readable, enqueue, close, error: streamError } = createSSEStream()
 
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+  const responseHeaders = new Headers({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+  })
 
-    const cleaned = text.replace(/```(?:json)?/gi, '').trim()
-
-    let parsed: RefineResponse
+  // Run streaming in background (do not await — return Response immediately)
+  ;(async () => {
+    let accumulated = ''
     try {
-      parsed = JSON.parse(cleaned)
-    } catch {
-      console.error('[api/refine] JSON parse failed, raw:', cleaned.slice(0, 200))
-      return NextResponse.json({ error: 'AI response unreadable. Coba lagi.' }, { status: 422 })
-    }
+      const stream = anthropic.messages.stream({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 6000,
+        temperature: 0,
+        system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),
+        messages: anthropicMessages,
+      })
 
-    return NextResponse.json({
-      message: parsed.message,
-      readyToFinalize: parsed.readyToFinalize ?? false,
-      analysis: parsed.analysis ?? null,
-    })
-  } catch (err) {
-    console.error('[api/refine] error:', err)
-    return NextResponse.json({ error: 'Terjadi kesalahan. Coba lagi.' }, { status: 500 })
-  }
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          accumulated += event.delta.text
+          enqueue(sseEvent('delta', { text: event.delta.text }))
+        }
+      }
+
+      const cleaned = accumulated.replace(/```(?:json)?/gi, '').trim()
+
+      let parsed: RefineResponse
+      try {
+        parsed = JSON.parse(cleaned)
+      } catch {
+        console.error('[api/refine] JSON parse failed, raw:', cleaned.slice(0, 200))
+        streamError('Terjadi kesalahan. Coba lagi.')
+        return
+      }
+
+      enqueue(sseEvent('done', {
+        message: parsed.message,
+        readyToFinalize: parsed.readyToFinalize ?? false,
+        analysis: parsed.analysis ?? null,
+      }))
+      close()
+    } catch (err) {
+      console.error('[api/refine] stream error:', err)
+      streamError('Terjadi kesalahan. Coba lagi.')
+    }
+  })()
+
+  return new Response(readable, { headers: responseHeaders })
 }

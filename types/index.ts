@@ -36,6 +36,7 @@ export type Phase = 'input' | 'analyzing' | 'refining' | 'finalizing' | 'done'
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  isStreaming?: boolean
 }
 
 export interface QAAnswer {

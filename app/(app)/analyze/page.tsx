@@ -32,6 +32,7 @@ import {
   incrementGuestUsage,
   readGuestUsage,
 } from '@/lib/guest-usage'
+import { readSSEStream } from '@/lib/sse-client'
 
 interface RefineAPIResponse {
   message: string
@@ -59,7 +60,7 @@ function buildFirstAssistantMessage(analysis: AnalysisResult): string {
   return `Ditemukan ${analysis.gapList.length} gap dan ${analysis.clarificationQuestions.length} pertanyaan klarifikasi. Jawab pertanyaan di atas atau ketik langsung di sini untuk iterasi.`
 }
 
-function AnalyzingState() {
+function AnalyzingState({ streamingText }: { streamingText: string }) {
   return (
     <div
       role="status"
@@ -73,6 +74,13 @@ function AnalyzingState() {
       />
       <p className="text-sm text-gray-500 font-medium">Menganalisis BRD...</p>
       <p className="text-xs text-gray-400">Biasanya selesai dalam 15–30 detik</p>
+      {streamingText && (
+        <div className="mt-4 max-w-xl w-full px-4">
+          <pre className="text-xs text-gray-400 whitespace-pre-wrap break-words max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3 border border-gray-100">
+            {streamingText}
+          </pre>
+        </div>
+      )}
     </div>
   )
 }
@@ -97,6 +105,7 @@ export default function AnalyzePage() {
   const [phase, setPhase] = useState<AppPhase>('select-project')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
+  const [streamingText, setStreamingText] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [requirements, setRequirements] = useState<RequirementsResult | null>(null)
   const [isRefining, setIsRefining] = useState(false)
@@ -104,6 +113,8 @@ export default function AnalyzePage() {
   const [error, setError] = useState<string | undefined>(undefined)
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | null>(null)
+  const [showPaywallCTA, setShowPaywallCTA] = useState(false)
   const [guestUsage, setGuestUsage] = useState<{ count: number; limit: number }>({
     count: 0,
     limit: 5,
@@ -119,13 +130,25 @@ export default function AnalyzePage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setIsAuthenticated(!!user)
-      if (!user) setGuestUsage(readGuestUsage())
+      if (user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan')
+          .eq('user_id', user.id)
+          .single()
+        setUserPlan((sub?.plan as 'free' | 'pro') ?? 'free')
+      } else {
+        setGuestUsage(readGuestUsage())
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session?.user)
-      if (!session?.user) setGuestUsage(readGuestUsage())
+      if (!session?.user) {
+        setGuestUsage(readGuestUsage())
+        setUserPlan(null)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -159,6 +182,10 @@ export default function AnalyzePage() {
   }, [result])
 
   function handleProjectSelect(project: Project) {
+    if (isAuthenticated && (!userPlan || userPlan === 'free')) {
+      setShowPaywallCTA(true)
+      return
+    }
     setSelectedProject(project)
     setPhase('input')
   }
@@ -192,6 +219,7 @@ export default function AnalyzePage() {
     }
 
     setPhase('analyzing')
+    setStreamingText('')
     setResult(undefined)
     setError(undefined)
     setMessages([])
@@ -202,17 +230,13 @@ export default function AnalyzePage() {
     setSectionStates(DEFAULT_SECTION_STATES)
 
     try {
-      const projectContextStr = selectedProject
-        ? `\n\nProject Context:\n${JSON.stringify(selectedProject.context, null, 2)}`
-        : ''
-
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
         },
-        body: JSON.stringify({ text: text + projectContextStr }),
+        body: JSON.stringify({ text, projectId: selectedProject?.id ?? null }),
       })
 
       if (!res.ok) {
@@ -222,73 +246,85 @@ export default function AnalyzePage() {
         return
       }
 
-      const parsed = await res.json()
-      const analysisResult: AnalysisResult = {
-        ...parsed,
-        sessionId: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      }
+      for await (const event of readSSEStream(res)) {
+        if (event.name === 'delta') {
+          const { text: chunk } = event.data as { text: string }
+          setStreamingText(prev => prev + chunk)
+        } else if (event.name === 'done') {
+          const parsed = event.data as Record<string, unknown>
 
-      const foundation: FoundationData = {
-        brd_summary: text.slice(0, 500),
-        gap_list: (parsed.gapList ?? []).map((g: { category: string; description: string; severity: 'high' | 'medium' | 'low' }) => ({
-          category: g.category,
-          description: g.description,
-          severity: g.severity,
-        })),
-        readiness_score: parsed.readinessScore ?? 0,
-        readiness_label: parsed.readinessLabel ?? '',
-        qa_log: [],
-        assumptions: parsed.assumptions ?? [],
-        out_of_scope: parsed.outOfScope ?? [],
-      }
-      setFoundationData(foundation)
+          const analysisResult: AnalysisResult = {
+            ...(parsed as Omit<AnalysisResult, 'sessionId' | 'createdAt'>),
+            sessionId: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+          }
 
-      const newSessionState: SessionState = (parsed.readinessScore ?? 0) >= 80 ? 'ready' : 'refining'
-      setSessionState(newSessionState)
-      setSectionStates(s => ({ ...s, foundation: 'done' }))
+          const foundation: FoundationData = {
+            brd_summary: text.slice(0, 500),
+            gap_list: ((parsed.gapList ?? []) as { category: string; description: string; severity: 'high' | 'medium' | 'low' }[]).map((g) => ({
+              category: g.category,
+              description: g.description,
+              severity: g.severity,
+            })),
+            readiness_score: (parsed.readinessScore as number) ?? 0,
+            readiness_label: (parsed.readinessLabel as string) ?? '',
+            qa_log: [],
+            assumptions: (parsed.assumptions as string[]) ?? [],
+            out_of_scope: (parsed.outOfScope as string[]) ?? [],
+          }
+          setFoundationData(foundation)
 
-      const firstMsg: ChatMessage = {
-        role: 'assistant',
-        content: buildFirstAssistantMessage(analysisResult),
-      }
+          const newSessionState: SessionState = ((parsed.readinessScore as number) ?? 0) >= 80 ? 'ready' : 'refining'
+          setSessionState(newSessionState)
+          setSectionStates(s => ({ ...s, foundation: 'done' }))
 
-      let savedAnalysisId: string | undefined
-      if (isAuthenticated) {
-        const saveRes = await fetch('/api/save-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: analysisResult.sessionId,
-            brdText: text,
-            initialAnalysis: analysisResult,
-            messages: [firstMsg],
-            projectId: selectedProject?.id ?? null,
-            sessionState: newSessionState,
-            sections: { foundation },
-            sectionStates: { ...DEFAULT_SECTION_STATES, foundation: 'done' },
-          }),
-        })
-        if (saveRes.ok) {
-          const saved = await saveRes.json().catch(() => ({}))
-          savedAnalysisId = saved.analysisId
-        } else {
-          console.error('[analyze] initial save failed:', await saveRes.text())
+          const firstMsg: ChatMessage = {
+            role: 'assistant',
+            content: buildFirstAssistantMessage(analysisResult),
+          }
+
+          let savedAnalysisId: string | undefined
+          if (isAuthenticated) {
+            const saveRes = await fetch('/api/save-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: analysisResult.sessionId,
+                brdText: text,
+                initialAnalysis: analysisResult,
+                messages: [firstMsg],
+                projectId: selectedProject?.id ?? null,
+                sessionState: newSessionState,
+                sections: { foundation },
+                sectionStates: { ...DEFAULT_SECTION_STATES, foundation: 'done' },
+              }),
+            })
+            if (saveRes.ok) {
+              const saved = await saveRes.json().catch(() => ({}))
+              savedAnalysisId = saved.analysisId
+            } else {
+              console.error('[analyze] initial save failed:', await saveRes.text())
+            }
+          }
+
+          const storedAnalysisResult: AnalysisResult = {
+            ...analysisResult,
+            id: savedAnalysisId,
+          }
+
+          setBrdText(text)
+          setResult(storedAnalysisResult)
+          setMessages([firstMsg])
+          persistAnalysisState(text, [firstMsg], storedAnalysisResult)
+          if (!isAuthenticated) setGuestUsage(incrementGuestUsage())
+          setPhase('refining')
+          return
+        } else if (event.name === 'error') {
+          const { error: msg } = event.data as { error: string }
+          setError(msg)
+          setPhase('input')
+          return
         }
-      }
-
-      const storedAnalysisResult: AnalysisResult = {
-        ...analysisResult,
-        id: savedAnalysisId,
-      }
-
-      setBrdText(text)
-      setResult(storedAnalysisResult)
-      setMessages([firstMsg])
-      setPhase('refining')
-      persistAnalysisState(text, [firstMsg], storedAnalysisResult)
-      if (!isAuthenticated) {
-        setGuestUsage(incrementGuestUsage())
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Terjadi kesalahan. Coba lagi.')
@@ -303,6 +339,10 @@ export default function AnalyzePage() {
   ): Promise<void> {
     setIsRefining(true)
     setError(undefined)
+
+    // Add streaming placeholder before the fetch so the user sees the typing indicator immediately
+    const streamingPlaceholder: ChatMessage = { role: 'assistant', content: '', isStreaming: true }
+    setMessages([...nextMessages, streamingPlaceholder])
 
     try {
       const res = await fetch('/api/refine', {
@@ -320,54 +360,71 @@ export default function AnalyzePage() {
       })
 
       if (!res.ok) {
+        // Remove the placeholder and the user message on non-2xx
         setMessages(nextMessages.slice(0, -1))
         setError('Gagal memproses. Coba lagi.')
         return
       }
 
-      const parsed: RefineAPIResponse = await res.json()
+      let streamedContent = ''
 
-      const updatedMessages: ChatMessage[] = [
-        ...nextMessages,
-        { role: 'assistant', content: parsed.message },
-      ]
-      setMessages(updatedMessages)
+      for await (const event of readSSEStream(res)) {
+        if (event.name === 'delta') {
+          const { text: chunk } = event.data as { text: string }
+          streamedContent += chunk
+          setMessages([...nextMessages, { role: 'assistant', content: streamedContent, isStreaming: true }])
+        } else if (event.name === 'done') {
+          const parsed = event.data as RefineAPIResponse
 
-      if (parsed.analysis) {
-        const updatedResult: AnalysisResult = {
-          ...currentResult,
-          ...parsed.analysis,
-        }
-        setResult(updatedResult)
+          const finalMessages: ChatMessage[] = [
+            ...nextMessages,
+            { role: 'assistant', content: parsed.message, isStreaming: false },
+          ]
+          setMessages(finalMessages)
 
-        // Update foundation data from refine response
-        if (foundationData) {
-          const updatedFoundation: FoundationData = {
-            ...foundationData,
-            gap_list: (parsed.analysis.gapList ?? foundationData.gap_list).map((g) => ({
-              category: g.category,
-              description: g.description,
-              severity: g.severity,
-            })),
-            readiness_score: parsed.analysis.readinessScore ?? foundationData.readiness_score,
-            readiness_label: parsed.analysis.readinessLabel ?? foundationData.readiness_label,
+          if (parsed.analysis) {
+            const updatedResult: AnalysisResult = {
+              ...currentResult,
+              ...parsed.analysis,
+            }
+            setResult(updatedResult)
+
+            // Update foundation data from refine response
+            if (foundationData) {
+              const updatedFoundation: FoundationData = {
+                ...foundationData,
+                gap_list: (parsed.analysis.gapList ?? foundationData.gap_list).map((g) => ({
+                  category: g.category,
+                  description: g.description,
+                  severity: g.severity,
+                })),
+                readiness_score: parsed.analysis.readinessScore ?? foundationData.readiness_score,
+                readiness_label: parsed.analysis.readinessLabel ?? foundationData.readiness_label,
+              }
+              setFoundationData(updatedFoundation)
+              const newScore = updatedFoundation.readiness_score
+              setSessionState(newScore >= 80 ? 'ready' : 'refining')
+            }
+
+            setQaAnswers([])
+            setResolvedIndices([])
+            persistAnalysisState(currentBrdText, finalMessages, updatedResult)
+          } else {
+            persistAnalysisState(currentBrdText, finalMessages, currentResult)
           }
-          setFoundationData(updatedFoundation)
-          const newScore = updatedFoundation.readiness_score
-          setSessionState(newScore >= 80 ? 'ready' : 'refining')
+
+          incrementRefinementRound()
+          const updated = getTempSession()
+          if (updated && (updated.refinementRounds >= 3 || updated.hasGenerated)) {
+            setShowAccountPrompt(true)
+          }
+          return
+        } else if (event.name === 'error') {
+          // Remove the placeholder and the user message on stream error
+          setMessages(nextMessages.slice(0, -1))
+          setError('Gagal memproses. Coba lagi.')
+          return
         }
-
-        setQaAnswers([])
-        setResolvedIndices([])
-        persistAnalysisState(currentBrdText, updatedMessages, updatedResult)
-      } else {
-        persistAnalysisState(currentBrdText, updatedMessages, currentResult)
-      }
-
-      incrementRefinementRound()
-      const updated = getTempSession()
-      if (updated && (updated.refinementRounds >= 3 || updated.hasGenerated)) {
-        setShowAccountPrompt(true)
       }
     } catch (e) {
       setMessages(nextMessages.slice(0, -1))
@@ -556,7 +613,32 @@ export default function AnalyzePage() {
             </div>
           </header>
           <div className="max-w-2xl mx-auto px-6 py-10 w-full">
-            <ProjectSelector onSelect={handleProjectSelect} />
+            {showPaywallCTA ? (
+              <div className="rounded-xl border border-teal-200 bg-teal-50 p-6 flex flex-col gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-teal-800">Fitur Pro: Company Context</h2>
+                  <p className="mt-2 text-sm text-teal-700">
+                    Company Context membantu AI menganalisis BRD sesuai konteks bisnis dan teknis proyekmu. Upgrade ke Pro untuk menggunakan fitur ini.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
+                  >
+                    Upgrade ke Pro
+                  </Link>
+                  <button
+                    onClick={() => setShowPaywallCTA(false)}
+                    className="text-sm text-teal-600 hover:text-teal-800 transition-colors"
+                  >
+                    Kembali ke daftar project
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <ProjectSelector onSelect={handleProjectSelect} />
+            )}
           </div>
         </div>
       </div>
@@ -668,7 +750,7 @@ export default function AnalyzePage() {
               </div>
             </div>
           ) : phase === 'analyzing' ? (
-            <AnalyzingState />
+            <AnalyzingState streamingText={streamingText} />
           ) : (
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
               {/* Living document shown in refining/finalizing/done alongside the chat */}
