@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -11,11 +11,15 @@ export default function VerifyEmailPage() {
   const [cooldown, setCooldown] = useState(0)
   const [message, setMessage] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
+  if (typeof window !== 'undefined' && !supabaseRef.current) {
+    supabaseRef.current = createClient()
+  }
 
   useEffect(() => {
     async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
+      if (!supabaseRef.current) return
+      const { data: { user } } = await supabaseRef.current.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -23,7 +27,7 @@ export default function VerifyEmailPage() {
       setEmail(user.email ?? null)
     }
     getUser()
-  }, [supabase, router])
+  }, [router])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -40,12 +44,12 @@ export default function VerifyEmailPage() {
   }, [cooldown])
 
   const handleResend = useCallback(async () => {
-    if (!email || cooldown > 0) return
+    if (!email || cooldown > 0 || !supabaseRef.current) return
 
     setStatus('loading')
     setMessage('')
 
-    const { error } = await supabase.auth.resend({
+    const { error } = await supabaseRef.current.auth.resend({
       type: 'signup',
       email,
     })
@@ -58,12 +62,13 @@ export default function VerifyEmailPage() {
       setMessage('Email verifikasi telah dikirim ulang.')
       setCooldown(60)
     }
-  }, [email, cooldown, supabase])
+  }, [email, cooldown])
 
   const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut()
+    if (!supabaseRef.current) return
+    await supabaseRef.current.auth.signOut()
     router.push('/login')
-  }, [supabase, router])
+  }, [router])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
