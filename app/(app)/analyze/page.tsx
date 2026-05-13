@@ -141,6 +141,7 @@ export default function AnalyzePage() {
         setUserPlan((sub?.plan as 'free' | 'pro') ?? 'free')
       } else {
         setGuestUsage(readGuestUsage())
+        setPhase('input')
       }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -148,6 +149,7 @@ export default function AnalyzePage() {
       if (!session?.user) {
         setGuestUsage(readGuestUsage())
         setUserPlan(null)
+        setPhase(prev => prev === 'select-project' ? 'input' : prev)
       }
     })
     return () => subscription.unsubscribe()
@@ -192,7 +194,7 @@ export default function AnalyzePage() {
 
   function handleNewSession() {
     setBrdText('')
-    setPhase('select-project')
+    setPhase(isAuthenticated ? 'select-project' : 'input')
     setSelectedProject(null)
     setResult(undefined)
     setMessages([])
@@ -729,12 +731,14 @@ export default function AnalyzePage() {
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto px-6 py-10">
                 <div className="mb-8">
+                  {isAuthenticated && (
                   <button
                     onClick={() => setPhase('select-project')}
                     className="text-sm text-gray-400 hover:text-gray-700 transition-colors mb-4 block"
                   >
                     ← {selectedProject?.name ?? 'Pilih project'}
                   </button>
+                  )}
                   <h1 className="text-2xl font-extrabold text-gray-900">Analisis BRD</h1>
                   <p className="mt-1.5 text-sm text-gray-500">
                     Paste BRD kamu dan dapatkan gap analysis, readiness score, serta pertanyaan klarifikasi dalam hitungan detik.
