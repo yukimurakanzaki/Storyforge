@@ -24,12 +24,29 @@ export async function POST(request: Request) {
   }
 
   // Parse request body
-  const body = await request.json()
+  let body: { email?: string; password?: string }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json(
+      { error: 'Request body tidak valid.' },
+      { status: 400 }
+    )
+  }
   const { email, password } = body
 
   if (!email || !password) {
     return NextResponse.json(
       { error: 'Email dan password wajib diisi.' },
+      { status: 400 }
+    )
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return NextResponse.json(
+      { error: 'Format email tidak valid.' },
       { status: 400 }
     )
   }

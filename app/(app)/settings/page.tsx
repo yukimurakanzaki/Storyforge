@@ -10,6 +10,9 @@ type DeletionStep = 'idle' | 'password' | 'confirm' | 'deleting'
 export default function SettingsPage() {
   const router = useRouter()
 
+  // --- Simple Logout State ---
+  const [simpleLogoutLoading, setSimpleLogoutLoading] = useState(false)
+
   // --- Global Logout State ---
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [logoutError, setLogoutError] = useState('')
@@ -21,6 +24,14 @@ export default function SettingsPage() {
   const [confirmPhrase, setConfirmPhrase] = useState('')
   const [deletionError, setDeletionError] = useState('')
   const [deletionLoading, setDeletionLoading] = useState(false)
+
+  // --- Simple Logout Handler ---
+  async function handleSimpleLogout() {
+    setSimpleLogoutLoading(true)
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
 
   // --- Global Logout Handler ---
   async function handleLogoutAll() {
@@ -154,6 +165,21 @@ export default function SettingsPage() {
         {/* Security Section */}
         <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Keamanan</h2>
+
+          {/* Simple Logout */}
+          <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-gray-200">
+            <p className="text-sm text-gray-600">
+              Keluar dari sesi ini saja.
+            </p>
+            <button
+              type="button"
+              onClick={handleSimpleLogout}
+              disabled={simpleLogoutLoading}
+              className="self-start rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {simpleLogoutLoading ? 'Keluar...' : 'Keluar'}
+            </button>
+          </div>
 
           <div className="flex flex-col gap-3">
             <p className="text-sm text-gray-600">

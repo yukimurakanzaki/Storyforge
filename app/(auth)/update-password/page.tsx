@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { validatePassword } from '@/lib/auth/password'
+import { PasswordStrengthChecklist, isPasswordValid } from '@/components/PasswordStrengthChecklist'
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('')
@@ -12,12 +13,14 @@ export default function UpdatePasswordPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'no-session'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [sessionReady, setSessionReady] = useState<boolean | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
         setSessionReady(false)
         setStatus('no-session')
       } else {
@@ -106,16 +109,19 @@ export default function UpdatePasswordPage() {
             </label>
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min. 8 karakter"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
-            <p className="mt-1 text-xs text-gray-400">
-              Min. 8 karakter, 1 huruf kapital, 1 angka, 1 simbol
-            </p>
+            <PasswordStrengthChecklist
+              password={password}
+              confirmPassword={confirm}
+              showPassword={showPassword}
+              onToggleShow={() => setShowPassword(!showPassword)}
+            />
           </div>
 
           <div>
@@ -124,7 +130,7 @@ export default function UpdatePasswordPage() {
             </label>
             <input
               id="confirm"
-              type="password"
+              type={showConfirm ? 'text' : 'password'}
               required
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -141,7 +147,7 @@ export default function UpdatePasswordPage() {
 
           <button
             type="submit"
-            disabled={status === 'loading' || !password || !confirm}
+            disabled={status === 'loading' || !password || !confirm || !isPasswordValid(password) || password !== confirm}
             className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === 'loading' ? 'Menyimpan...' : 'Simpan Password Baru'}
