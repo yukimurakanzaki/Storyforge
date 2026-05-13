@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   // enumeration. The redirect URL points to the callback route with type=recovery
   // so the callback can handle the recovery flow and redirect to update-password.
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/api/auth/callback?type=recovery`,
+    redirectTo: `${origin}/update-password`,
   })
 
   // Always return 200 regardless of whether the email exists in the system

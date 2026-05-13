@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -11,15 +11,11 @@ export default function VerifyEmailPage() {
   const [cooldown, setCooldown] = useState(0)
   const [message, setMessage] = useState('')
   const router = useRouter()
-  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
-  if (typeof window !== 'undefined' && !supabaseRef.current) {
-    supabaseRef.current = createClient()
-  }
 
   useEffect(() => {
     async function getUser() {
-      if (!supabaseRef.current) return
-      const { data: { user } } = await supabaseRef.current.auth.getUser()
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -44,12 +40,13 @@ export default function VerifyEmailPage() {
   }, [cooldown])
 
   const handleResend = useCallback(async () => {
-    if (!email || cooldown > 0 || !supabaseRef.current) return
+    if (!email || cooldown > 0) return
 
     setStatus('loading')
     setMessage('')
 
-    const { error } = await supabaseRef.current.auth.resend({
+    const supabase = createClient()
+    const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
     })
@@ -65,8 +62,8 @@ export default function VerifyEmailPage() {
   }, [email, cooldown])
 
   const handleSignOut = useCallback(async () => {
-    if (!supabaseRef.current) return
-    await supabaseRef.current.auth.signOut()
+    const supabase = createClient()
+    await supabase.auth.signOut()
     router.push('/login')
   }, [router])
 

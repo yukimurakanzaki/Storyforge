@@ -65,6 +65,9 @@ export function AuthNav({ showDashboardLink = true }: AuthNavProps) {
           Dashboard
         </Link>
       )}
+      <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
+        Pengaturan
+      </Link>
       <span className="text-xs text-gray-400 hidden sm:inline">
         {user.email}
       </span>

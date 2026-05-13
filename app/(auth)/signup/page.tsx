@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { sanitizeAuthRedirectPath } from '@/lib/auth/redirect'
 import { validatePassword } from '@/lib/auth/password'
+import { PasswordStrengthChecklist, isPasswordValid } from '@/components/PasswordStrengthChecklist'
 
 type SignupStatus = 'idle' | 'loading' | 'sent' | 'error'
 
@@ -15,7 +15,10 @@ export default function SignupPage() {
   const [confirm, setConfirm] = useState('')
   const [status, setStatus] = useState<SignupStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
-  const router = useRouter()
+  const [oauthLoading, setOauthLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [emailError, setEmailError] = useState('')
 
   function getRedirectPath() {
     const params = new URLSearchParams(window.location.search)
@@ -23,14 +26,18 @@ export default function SignupPage() {
   }
 
   async function handleGoogleSignup() {
+    setOauthLoading(true)
     const redirectPath = getRedirectPath()
     const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
       },
     })
+    if (error) {
+      setOauthLoading(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,13 +71,16 @@ export default function SignupPage() {
 
     if (error) {
       setStatus('error')
-      setErrorMsg(error.message)
+      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+        setErrorMsg('Email sudah terdaftar. Silakan login atau gunakan email lain.')
+      } else {
+        setErrorMsg(error.message)
+      }
       return
     }
 
     if (data.session) {
-      router.push(redirectPath)
-      router.refresh()
+      window.location.href = redirectPath
       return
     }
 
@@ -104,7 +114,8 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={handleGoogleSignup}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              disabled={oauthLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -124,7 +135,7 @@ export default function SignupPage() {
                   fill="#EA4335"
                 />
               </svg>
-              Daftar dengan Google
+              {oauthLoading ? 'Menghubungkan...' : 'Daftar dengan Google'}
             </button>
 
             {/* Divider */}
@@ -145,10 +156,18 @@ export default function SignupPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
+                  onBlur={() => {
+                    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                      setEmailError('Format email tidak valid')
+                    }
+                  }}
                   placeholder="kamu@email.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${emailError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500'}`}
                 />
+                {emailError && (
+                  <p className="mt-1 text-xs text-red-500">{emailError}</p>
+                )}
               </div>
 
               <div>
@@ -157,16 +176,19 @@ export default function SignupPage() {
                 </label>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min. 8 karakter"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
-                <p className="mt-1 text-xs text-gray-400">
-                  Min. 8 karakter, 1 huruf kapital, 1 angka, 1 simbol
-                </p>
+                <PasswordStrengthChecklist
+                  password={password}
+                  confirmPassword={confirm}
+                  showPassword={showPassword}
+                  onToggleShow={() => setShowPassword(!showPassword)}
+                />
               </div>
 
               <div>
@@ -175,7 +197,7 @@ export default function SignupPage() {
                 </label>
                 <input
                   id="confirm"
-                  type="password"
+                  type={showConfirm ? 'text' : 'password'}
                   required
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
@@ -192,7 +214,7 @@ export default function SignupPage() {
 
               <button
                 type="submit"
-                disabled={status === 'loading' || !email || !password || !confirm}
+                disabled={status === 'loading' || !email || !password || !confirm || !isPasswordValid(password) || password !== confirm}
                 className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {status === 'loading' ? 'Mendaftarkan...' : 'Daftar'}
@@ -205,6 +227,11 @@ export default function SignupPage() {
           Sudah punya akun?{' '}
           <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">
             Masuk
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm">
+          <Link href="/analyze" className="text-gray-500 hover:text-teal-600 transition-colors">
+            Lanjutkan sebagai Tamu
           </Link>
         </p>
       </div>

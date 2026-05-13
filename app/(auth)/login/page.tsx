@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { sanitizeAuthRedirectPath } from '@/lib/auth/redirect'
 
 export default function LoginPage() {
@@ -26,8 +26,8 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [oauthLoading, setOauthLoading] = useState(false)
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   const redirectPath = sanitizeAuthRedirectPath(searchParams.get('redirect'))
@@ -37,6 +37,9 @@ function LoginForm() {
     if (searchParams.get('error') === 'auth') {
       setStatus('error')
       setErrorMsg('Login dengan Google gagal. Silakan coba lagi.')
+    }
+    if (searchParams.get('message') === 'password-updated') {
+      setSuccessMsg('Password berhasil diubah. Silakan login dengan password baru.')
     }
   }, [searchParams])
 
@@ -91,9 +94,8 @@ function LoginForm() {
         return
       }
 
-      // Success
-      router.push(redirectPath)
-      router.refresh()
+      // Success — hard navigation to ensure cookies are sent
+      window.location.href = redirectPath
     } catch {
       setStatus('error')
       setErrorMsg('Terjadi kesalahan. Coba lagi.')
@@ -114,6 +116,12 @@ function LoginForm() {
         </div>
 
         {/* Google OAuth Button */}
+        {successMsg && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            {successMsg}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -207,6 +215,11 @@ function LoginForm() {
           Belum punya akun?{' '}
           <Link href="/signup" className="font-medium text-teal-600 hover:text-teal-700">
             Daftar
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm">
+          <Link href="/analyze" className="text-gray-500 hover:text-teal-600 transition-colors">
+            Lanjutkan sebagai Tamu
           </Link>
         </p>
       </div>

@@ -138,7 +138,11 @@ export default function AnalyzePage() {
           .select('plan')
           .eq('user_id', user.id)
           .single()
-        setUserPlan((sub?.plan as 'free' | 'pro') ?? 'free')
+        const plan = (sub?.plan as 'free' | 'pro') ?? 'free'
+        setUserPlan(plan)
+        if (plan === 'free') {
+          setPhase('input')
+        }
       } else {
         setGuestUsage(readGuestUsage())
         setPhase('input')
