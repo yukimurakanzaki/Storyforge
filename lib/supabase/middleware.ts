@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js'
 
 export function isProtectedAppPath(pathname: string): boolean {
   return (
+    pathname === '/analyze' ||
     pathname.startsWith('/analyze/') ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/settings') ||

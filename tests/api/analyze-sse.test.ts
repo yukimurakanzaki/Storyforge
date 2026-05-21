@@ -106,6 +106,16 @@ vi.mock('@/lib/anthropic', () => ({
   Anthropic: class {},
 }))
 
+// Mock Google AI SDK and Vercel AI SDK (used for free tier, not exercised in these tests)
+vi.mock('@ai-sdk/google', () => ({
+  google: vi.fn(() => 'mock-google-model'),
+}))
+
+vi.mock('ai', () => ({
+  streamText: vi.fn(),
+  generateText: vi.fn(),
+}))
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeRequest(
@@ -117,10 +127,6 @@ function makeRequest(
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   })
-}
-
-function makeGuestRequest(body: unknown = { text: 'Valid BRD text' }): NextRequest {
-  return makeRequest(body, { 'x-guest-mode': '1' })
 }
 
 function makeUserRequest(body: unknown = { text: 'Valid BRD text' }): NextRequest {
@@ -167,7 +173,7 @@ beforeEach(async () => {
   vi.resetModules()
 
   mockUsageCount = 0
-  mockPlan = 'free'
+  mockPlan = 'pro'
   mockUsageRowExists = true
   mockAuthUser = { id: 'test-user-id' }
 
@@ -196,36 +202,6 @@ describe('4.1 Pre-stream error paths — return JSON, not SSE', () => {
 
     const body = await response.json()
     expect(body.error).toBe('Unauthorized')
-  })
-
-  it('returns 429 JSON when guest rate-limit is exceeded', async () => {
-    // Exhaust the in-memory rate limiter for a unique test IP
-    const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-    const testIp = 'test-rate-limit-ip-429'
-    // MAX_GUEST_REQUESTS = 10; exhaust all slots
-    for (let i = 0; i < 10; i++) {
-      checkGuestRateLimit(testIp)
-    }
-
-    // Now make a request that will appear to come from that IP
-    const request = new NextRequest('http://localhost/api/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-guest-mode': '1',
-        'x-forwarded-for': testIp,
-      },
-      body: JSON.stringify({ text: 'Valid BRD text' }),
-    })
-
-    const POST = await getPostHandler()
-    const response = await POST(request)
-
-    expect(response.status).toBe(429)
-    expect(response.headers.get('Content-Type')).toContain('application/json')
-
-    const body = await response.json()
-    expect(body.error).toBe('Rate limit exceeded')
   })
 
   it('returns 429 + X-Limit-Reached: true when usage limit reached', async () => {
@@ -373,30 +349,5 @@ describe('4.2 Usage tracking — done vs error', () => {
       return arg && typeof arg === 'object' && 'count' in arg && 'user_id' in arg
     })
     expect(mockUpdate.mock.calls.length === 0 || !usageCounterInsertCalled).toBe(true)
-  })
-
-  it('guest mode never calls incrementUsage regardless of outcome', async () => {
-    const POST = await getPostHandler()
-    const response = await POST(makeGuestRequest())
-
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream')
-
-    await drainSSEStream(response)
-
-    // No Supabase calls at all for guest mode
-    expect(mockUpdate.mock.calls.length).toBe(0)
-    expect(mockInsert.mock.calls.length).toBe(0)
-  })
-
-  it('streaming response includes X-Mode header', async () => {
-    const POST = await getPostHandler()
-
-    const userResponse = await POST(makeUserRequest())
-    expect(userResponse.headers.get('X-Mode')).toBe('user')
-    await drainSSEStream(userResponse)
-
-    const guestResponse = await POST(makeGuestRequest())
-    expect(guestResponse.headers.get('X-Mode')).toBe('guest')
-    await drainSSEStream(guestResponse)
   })
 })
