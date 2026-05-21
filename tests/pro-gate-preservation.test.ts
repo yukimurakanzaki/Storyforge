@@ -97,18 +97,6 @@ function buildSupabaseMock(options: {
   }
 }
 
-// ─── Guest rate-limit mock ────────────────────────────────────────────────────
-
-let guestAllowed = true
-
-vi.mock('@/lib/guest-rate-limit', () => ({
-  checkGuestRateLimit: vi.fn(() => ({
-    allowed: guestAllowed,
-    remaining: guestAllowed ? 9 : 0,
-  })),
-  getClientIp: vi.fn(() => '127.0.0.1'),
-}))
-
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -155,6 +143,20 @@ vi.mock('@/lib/anthropic', () => ({
   Anthropic: class {},
 }))
 
+// Mock Google AI SDK and Vercel AI SDK (used for free tier)
+vi.mock('@ai-sdk/google', () => ({
+  google: vi.fn(() => 'mock-google-model'),
+}))
+
+vi.mock('ai', () => ({
+  streamText: vi.fn().mockImplementation(() => ({
+    textStream: (async function* () {
+      yield VALID_JSON_TEXT
+    })(),
+  })),
+  generateText: vi.fn(),
+}))
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function drainSSEStream(response: Response): Promise<string[]> {
@@ -179,12 +181,10 @@ async function drainSSEStream(response: Response): Promise<string[]> {
 }
 
 function makeRequest(options: {
-  guestMode?: boolean
   body?: unknown
   rawBody?: string
 }): NextRequest {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (options.guestMode) headers['x-guest-mode'] = '1'
   const body =
     options.rawBody !== undefined ? options.rawBody : JSON.stringify(options.body)
   return new NextRequest('http://localhost/api/analyze', {
@@ -205,7 +205,6 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.resetModules()
-    guestAllowed = true
     mockAnthropicStream.mockImplementation(() => makeStreamFromText(VALID_JSON_TEXT))
     mockEventInsert.mockResolvedValue({ error: null })
 
@@ -260,12 +259,11 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
     expect(result).toEqual({ valid: false, error: 'BRD text too large', status: 413 })
   })
 
-  it('Baseline 4: guest user with valid text → SSE stream returns event: done', async () => {
+  it('Baseline 4: unauthenticated user → returns 401 Unauthorized', async () => {
     /**
-     * Observation: guest mode with valid text proceeds to analysis and emits
-     * event: done. No auth check, no usage tracking.
+     * Observation: unauthenticated requests return 401 Unauthorized.
      *
-     * Validates: Requirements 3.2
+     * Validates: Requirements 4.1
      */
     const { createClient } = await import('@/lib/supabase/server')
     vi.mocked(createClient).mockResolvedValue(
@@ -273,14 +271,10 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
     )
 
     const POST = await getPostHandler()
-    const req = makeRequest({ guestMode: true, body: { text: 'valid BRD text' } })
+    const req = makeRequest({ body: { text: 'valid BRD text' } })
     const response = await POST(req)
 
-    expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream')
-
-    const events = await drainSSEStream(response)
-    expect(events).toContain('done')
+    expect(response.status).toBe(401)
   })
 
   it('Baseline 5: free user with projectId: null → SSE stream returns event: done (same as no projectId)', async () => {
@@ -439,14 +433,14 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
     )
   })
 
-  // ─── PBT: guest requests always proceed to analysis (when rate-limit allows) ─
+  // ─── PBT: unauthenticated requests always return 401 ─
 
-  it('PBT: guest requests with valid text always return SSE stream with event: done', async () => {
+  it('PBT: unauthenticated requests with valid text always return 401', async () => {
     /**
-     * Property: for any valid text string (1–1000 chars), a guest request
-     * returns an SSE stream containing event: done.
+     * Property: for any valid text string (1–1000 chars), an unauthenticated request
+     * returns 401 Unauthorized.
      *
-     * Validates: Requirements 3.2
+     * Validates: Requirements 4.1
      */
     const { createClient } = await import('@/lib/supabase/server')
 
@@ -456,7 +450,6 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
         async (text) => {
           vi.resetModules()
           vi.clearAllMocks()
-          guestAllowed = true
           mockAnthropicStream.mockImplementation(() => makeStreamFromText(VALID_JSON_TEXT))
 
           vi.mocked(createClient).mockResolvedValue(
@@ -464,12 +457,10 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
           )
 
           const POST = await getPostHandler()
-          const req = makeRequest({ guestMode: true, body: { text } })
+          const req = makeRequest({ body: { text } })
           const response = await POST(req)
 
-          expect(response.status).toBe(200)
-          const events = await drainSSEStream(response)
-          expect(events).toContain('done')
+          expect(response.status).toBe(401)
         }
       ),
       { numRuns: 10 }
@@ -591,7 +582,7 @@ describe('Preservation — Pro Gate: Company Context (Non-Buggy Request Behavior
           )
 
           const POST = await getPostHandler()
-          const req = makeRequest({ guestMode: false, body: payload })
+          const req = makeRequest({ body: payload })
           const response = await POST(req)
 
           expect(response.status).toBe(401)

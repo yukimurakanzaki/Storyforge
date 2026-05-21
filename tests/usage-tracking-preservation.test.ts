@@ -1,20 +1,19 @@
 /**
- * Preservation Property Tests — Guest, Validation, and Error Paths Unchanged
+ * Preservation Property Tests — Validation and Error Paths Unchanged
  *
  * Property 2: Preservation — These tests MUST PASS on UNFIXED code.
  * They capture baseline behavior that must be preserved after the fix.
  *
  * Observation-first methodology:
- * - Guest request with x-guest-mode: 1 → uses in-memory rate limiter, no Supabase usage calls
  * - Invalid JSON body → 400 "Invalid JSON"
  * - Missing/empty text → 400 "Missing text"
  * - Text > 150,000 chars → 413 "BRD text too large"
- * - Unauthenticated non-guest → 401 "Unauthorized"
+ * - Unauthenticated requests → 401 "Unauthorized"
  * - Anthropic throws → 500, no usage increment
  *
  * EXPECTED OUTCOME: ALL tests PASS on unfixed code.
  *
- * Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5
+ * Validates: Requirements 3.3, 3.4, 3.5
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -87,19 +86,6 @@ function buildSupabaseMock(authenticated: boolean) {
     }),
   }
 }
-
-// ─── Guest rate-limit mock ────────────────────────────────────────────────────
-
-// Default: guest requests are allowed (not rate-limited)
-let guestAllowed = true
-
-vi.mock('@/lib/guest-rate-limit', () => ({
-  checkGuestRateLimit: vi.fn(() => ({
-    allowed: guestAllowed,
-    remaining: guestAllowed ? 9 : 0,
-  })),
-  getClientIp: vi.fn(() => '127.0.0.1'),
-}))
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 
@@ -191,16 +177,12 @@ async function drainSSEStream(response: Response): Promise<string[]> {
 }
 
 function makeRequest(options: {
-  guestMode?: boolean
   body?: unknown
   rawBody?: string
   authenticated?: boolean
 }): NextRequest {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-  }
-  if (options.guestMode) {
-    headers['x-guest-mode'] = '1'
   }
 
   const body =
@@ -233,11 +215,10 @@ function countUsageMutations() {
 
 // ─── Test Suite ───────────────────────────────────────────────────────────────
 
-describe('Preservation — Guest, Validation, and Error Paths Unchanged', () => {
+describe('Preservation — Validation and Error Paths Unchanged', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.resetModules()
-    guestAllowed = true
     mockEventInsert.mockResolvedValue({ error: null })
 
     // Default: Anthropic returns a valid response stream
@@ -247,82 +228,6 @@ describe('Preservation — Guest, Validation, and Error Paths Unchanged', () => 
     vi.mocked(createClient).mockResolvedValue(
       buildSupabaseMock(true) as never
     )
-  })
-
-  // ─── Property 3.1: Guest mode uses in-memory rate limiter, no Supabase usage calls ──
-
-  it('Property 3.1 (PBT): guest requests use in-memory rate limiter and make no Supabase usage mutations', async () => {
-    /**
-     * For all guest requests (any valid/invalid payload), the route must:
-     * 1. Use checkGuestRateLimit (in-memory), not Supabase usage functions
-     * 2. Never call insert/update/upsert on usage_counters or analysis_events
-     *
-     * Validates: Requirement 3.1
-     */
-    const { createClient } = await import('@/lib/supabase/server')
-    const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-
-    await fc.assert(
-      fc.asyncProperty(
-        // Generate a variety of text payloads for guest requests
-        fc.oneof(
-          // Valid text
-          fc.string({ minLength: 1, maxLength: 1000 }).map((t) => ({ text: t })),
-          // Empty text (will fail validation but still guest path)
-          fc.constant({ text: '' }),
-          // Missing text field
-          fc.constant({}),
-          // Extra fields alongside valid text
-          fc.record({
-            text: fc.string({ minLength: 1, maxLength: 500 }),
-            extra: fc.string(),
-          }),
-        ),
-        async (payload) => {
-          vi.resetModules()
-          vi.clearAllMocks()
-          guestAllowed = true
-          mockAnthropicStream.mockImplementation(() => makeStreamFromChunks([VALID_JSON_TEXT]))
-
-          vi.mocked(createClient).mockResolvedValue(
-            buildSupabaseMock(true) as never
-          )
-
-          const POST = await getPostHandler()
-          const req = makeRequest({ guestMode: true, body: payload })
-          await POST(req)
-          // checkGuestRateLimit must have been called (in-memory limiter)
-          expect(vi.mocked(checkGuestRateLimit)).toHaveBeenCalled()
-
-          // No Supabase usage mutations should occur for guest requests
-          const mutations = countUsageMutations()
-          expect(mutations).toBe(0)
-        }
-      ),
-      { numRuns: 10 }
-    )
-  })
-
-  it('Property 3.1b: guest request that is rate-limited returns 429 from in-memory limiter', async () => {
-    /**
-     * When the in-memory rate limiter denies a guest request, the route
-     * returns 429 without touching Supabase usage tables.
-     *
-     * Validates: Requirement 3.1
-     */
-    const { createClient } = await import('@/lib/supabase/server')
-    vi.mocked(createClient).mockResolvedValue(buildSupabaseMock(true) as never)
-
-    guestAllowed = false
-
-    const POST = await getPostHandler()
-    const req = makeRequest({ guestMode: true, body: { text: 'some BRD text' } })
-    const response = await POST(req)
-
-    expect(response.status).toBe(429)
-
-    // No Supabase usage mutations
-    expect(countUsageMutations()).toBe(0)
   })
 
   // ─── Property 3.3: Invalid payloads return correct 400/413 errors ─────────
@@ -413,11 +318,11 @@ describe('Preservation — Guest, Validation, and Error Paths Unchanged', () => 
     )
   })
 
-  // ─── Property 3.4: Unauthenticated non-guest requests return 401 ──────────
+  // ─── Property 3.4: Unauthenticated requests return 401 ──────────
 
-  it('Property 3.4 (PBT): unauthenticated non-guest requests always return 401', async () => {
+  it('Property 3.4 (PBT): unauthenticated requests always return 401', async () => {
     /**
-     * For all requests without x-guest-mode and without a valid session,
+     * For all requests without a valid session,
      * the route must return 401 Unauthorized.
      *
      * Validates: Requirement 3.4
@@ -443,8 +348,7 @@ describe('Preservation — Guest, Validation, and Error Paths Unchanged', () => 
           )
 
           const POST = await getPostHandler()
-          // No x-guest-mode header → goes to auth check
-          const req = makeRequest({ guestMode: false, body: payload })
+          const req = makeRequest({ body: payload })
           const response = await POST(req)
 
           expect(response.status).toBe(401)
@@ -569,7 +473,7 @@ describe('Preservation — Guest, Validation, and Error Paths Unchanged', () => 
     expect(body.error).toBe('BRD text too large')
   })
 
-  it('Baseline: unauthenticated non-guest request returns 401 Unauthorized', async () => {
+  it('Baseline: unauthenticated request returns 401 Unauthorized', async () => {
     const { createClient } = await import('@/lib/supabase/server')
     vi.mocked(createClient).mockResolvedValue(buildSupabaseMock(false) as never)
 

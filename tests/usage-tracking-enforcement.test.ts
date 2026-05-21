@@ -120,6 +120,20 @@ vi.mock('@/lib/anthropic', () => ({
   Anthropic: class {},
 }))
 
+// Mock Google AI SDK and Vercel AI SDK (used for free tier)
+vi.mock('@ai-sdk/google', () => ({
+  google: vi.fn(() => 'mock-google-model'),
+}))
+
+vi.mock('ai', () => ({
+  streamText: vi.fn().mockImplementation(() => ({
+    textStream: (async function* () {
+      yield VALID_JSON_TEXT
+    })(),
+  })),
+  generateText: vi.fn(),
+}))
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeAuthenticatedRequest(text = 'Sample BRD text for analysis') {
@@ -127,7 +141,7 @@ function makeAuthenticatedRequest(text = 'Sample BRD text for analysis') {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      // No x-guest-mode header → authenticated path
+      // Authenticated path
     },
     body: JSON.stringify({ text }),
   })

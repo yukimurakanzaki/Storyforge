@@ -3,8 +3,8 @@ import { isProtectedAppPath, isUnverifiedEmailUser } from '@/lib/supabase/middle
 import type { User } from '@supabase/supabase-js'
 
 describe('isProtectedAppPath', () => {
-  it('does not protect the base analyze page', () => {
-    expect(isProtectedAppPath('/analyze')).toBe(false)
+  it('protects the base analyze page (exact match)', () => {
+    expect(isProtectedAppPath('/analyze')).toBe(true)
   })
 
   it('protects saved analyze session detail pages', () => {

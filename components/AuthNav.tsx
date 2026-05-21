@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import { TierBadge } from '@/components/ui/TierBadge'
 
 interface AuthNavProps {
   showDashboardLink?: boolean
@@ -12,19 +13,31 @@ interface AuthNavProps {
 
 export function AuthNav({ showDashboardLink = true }: AuthNavProps) {
   const [user, setUser] = useState<User | null>(null)
+  const [plan, setPlan] = useState<'free' | 'pro' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user)
+      if (user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan')
+          .eq('user_id', user.id)
+          .single()
+        setPlan((sub?.plan as 'free' | 'pro') ?? 'free')
+      }
       setIsLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null)
+        if (!session?.user) {
+          setPlan(null)
+        }
       }
     )
 
@@ -60,6 +73,7 @@ export function AuthNav({ showDashboardLink = true }: AuthNavProps) {
 
   return (
     <div className="flex items-center gap-3">
+      {plan && <TierBadge plan={plan} />}
       {showDashboardLink && (
         <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
           Dashboard

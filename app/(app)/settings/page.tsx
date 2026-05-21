@@ -1,14 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { TierBadge } from '@/components/ui/TierBadge'
 
 type DeletionStep = 'idle' | 'password' | 'confirm' | 'deleting'
 
 export default function SettingsPage() {
   const router = useRouter()
+
+  // --- Plan State ---
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | null>(null)
+
+  // Fetch user plan on mount
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan')
+          .eq('user_id', user.id)
+          .single()
+        setUserPlan((sub?.plan as 'free' | 'pro') ?? 'free')
+      }
+    })
+  }, [])
 
   // --- Simple Logout State ---
   const [simpleLogoutLoading, setSimpleLogoutLoading] = useState(false)
@@ -145,9 +164,12 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white px-4 py-3">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-teal-600">
-            StoryForge<span className="text-gray-800">.id</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="text-lg font-bold text-teal-600">
+              StoryForge<span className="text-gray-800">.id</span>
+            </Link>
+            {userPlan && <TierBadge plan={userPlan} />}
+          </div>
           <nav className="flex items-center gap-4 text-sm text-gray-500">
             <Link href="/analyze" className="hover:text-gray-800 transition-colors">
               Analisis Baru
