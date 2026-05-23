@@ -74,32 +74,59 @@ export function LivingDocument({ foundationData, sectionStates, sessionState, on
         {foundationData && <FoundationSection data={foundationData} />}
       </SectionCard>
 
-      {/* Sections 2–8: disabled until ready */}
-      {SECTION_META.map(({ key, title, badges }) => {
-        const iconData = ICONS[key]
-        return (
-          <SectionCard
-            key={key}
-            title={title}
-            icon={iconData.svg}
-            iconLabel={iconData.label}
-            badges={[...badges]}
-            status={sectionStates[key as keyof SectionStates]}
-            disabled={!isReady}
-          />
-        )
-      })}
+      {/* Sections 2–8: collapsed into one locked block until ready */}
+      {!isReady ? (
+        <div className="border border-gray-200 rounded-xl bg-white p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-gray-700">Sections berikutnya</span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+              Score ≥ 80 untuk membuka
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {SECTION_META.map(({ title, badges }) => (
+              <li key={title} className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">{title}</span>
+                <div className="flex gap-1">
+                  {badges.map(b => (
+                    <span key={b} className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        SECTION_META.map(({ key, title, badges }) => {
+          const iconData = ICONS[key]
+          return (
+            <SectionCard
+              key={key}
+              title={title}
+              icon={iconData.svg}
+              iconLabel={iconData.label}
+              badges={[...badges]}
+              status={sectionStates[key as keyof SectionStates]}
+              disabled={false}
+            />
+          )
+        })
+      )}
 
-      {/* Section 9: Export */}
-      <SectionCard
-        title="Output & Export"
-        icon={ICONS.export.svg}
-        iconLabel={ICONS.export.label}
-        badges={['Semua']}
-        status="empty"
-      >
-        <p className="text-slate-500 text-sm">Export tersedia setelah semua section selesai. (Plan 5)</p>
-      </SectionCard>
+      {/* Export — visible only when all sections are done */}
+      {isReady && (
+        <SectionCard
+          title="Output & Export"
+          icon={ICONS.export.svg}
+          iconLabel={ICONS.export.label}
+          badges={['Semua']}
+          status="empty"
+        >
+          <p className="text-gray-500 text-sm">Export tersedia setelah semua section selesai.</p>
+        </SectionCard>
+      )}
     </div>
   )
 }

@@ -68,7 +68,7 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
       </div>
 
       {/* New analysis button */}
-      <div className="px-3 py-3 flex-shrink-0">
+      <div className="px-4 py-3 flex-shrink-0">
         <button
           onClick={onNewSession}
           className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer"
@@ -81,7 +81,7 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
       </div>
 
       {/* Section label */}
-      <div className="px-4 pb-1 flex-shrink-0">
+      <div className="px-4 py-2 flex-shrink-0">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Riwayat</p>
       </div>
 
@@ -108,7 +108,7 @@ export function SessionSidebar({ isAuthenticated, onNewSession }: SessionSidebar
         ) : sessions.length === 0 ? (
           <p className="px-3 py-2 text-xs text-gray-600">Belum ada riwayat</p>
         ) : (
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {sessions.map((session) => (
               <Link
                 key={session.id}

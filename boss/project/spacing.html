@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Spacing, Radius, Shadow · BOSS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="assets/tokens.css" />
+</head>
+<body data-page="spacing">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Foundations</div>
+      <h1>Spacing, Radius, Shadow</h1>
+      <p>Token spasi dan bentuk yang memberi ritme konsisten ke seluruh produk BOSS.</p>
+    </header>
+    <div class="content">
+      <section class="section">
+        <h2>Gap Spacing</h2>
+        <div class="section-divider"></div>
+        <table class="spec-table">
+          <thead><tr><th>Token</th><th>Reference</th><th>Value</th><th style="width:30%">Visual</th></tr></thead>
+          <tbody id="gap"></tbody>
+        </table>
+      </section>
+      <section class="section">
+        <h2>Border Radius</h2>
+        <div class="section-divider"></div>
+        <table class="spec-table">
+          <thead><tr><th>Token</th><th>Value</th><th>Visual</th></tr></thead>
+          <tbody id="radius"></tbody>
+        </table>
+      </section>
+      <section class="section">
+        <h2>Shadow / Elevation</h2>
+        <div class="section-divider"></div>
+        <table class="spec-table">
+          <thead><tr><th>Token</th><th>Position (X,Y)</th><th>Blur</th><th>Color</th><th>Visual</th></tr></thead>
+          <tbody>
+            <tr><td><span class="token">elevation/1</span></td><td>0, 4</td><td>16</td><td>00305F · 10%</td><td><div style="width:64px;height:64px;background:#fff;border-radius:8px;box-shadow:var(--elevation-1)"></div></td></tr>
+            <tr><td><span class="token">elevation/2</span></td><td>0, 10</td><td>24</td><td>00305F · 15%</td><td><div style="width:64px;height:64px;background:#fff;border-radius:8px;box-shadow:var(--elevation-2)"></div></td></tr>
+            <tr><td><span class="token">elevation/3</span></td><td>0, 24</td><td>32</td><td>00305F · 25%</td><td><div style="width:64px;height:64px;background:#fff;border-radius:8px;box-shadow:var(--elevation-3)"></div></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+const GAP = [['none','spacing/none','0px',0],['xs','spacing/1','4px',4],['sm','spacing/2','8px',8],['md','spacing/3','12px',12],['lg','spacing/4','16px',16],['xl','spacing/6','24px',24],['2xl','spacing/8','32px',32],['3xl','spacing/12','48px',48],['4xl','spacing/16','64px',64],['5xl','spacing/18','72px',72]];
+document.getElementById('gap').innerHTML = GAP.map(([n,r,v,px])=>`<tr><td><span class="token">gap/${n}</span></td><td><span class="token">${r}</span></td><td>${v}</td><td><div style="height:14px;width:${px}px;background:var(--primary-300);border-radius:3px"></div></td></tr>`).join('');
+const RAD = [['none','0px',0],['xs','2px',2],['sm','4px',4],['md','6px',6],['lg','8px',8],['xl','12px',12],['2xl','16px',16],['3xl','24px',24],['4xl','32px',32],['full','inf (9999)',9999]];
+document.getElementById('radius').innerHTML = RAD.map(([n,v,px])=>`<tr><td><span class="token">radius/${n}</span></td><td>${v}</td><td><div style="width:48px;height:48px;background:var(--primary-300);border-radius:${px}px"></div></td></tr>`).join('');
+</script>
+</body>
+</html>

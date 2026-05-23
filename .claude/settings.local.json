@@ -5,7 +5,15 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npm --version)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(rtk git *)",
+      "Bash(rtk tsc *)",
+      "Bash(rtk npm *)",
+      "Bash(rtk ls *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk read *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)"
     ]
   }
 }

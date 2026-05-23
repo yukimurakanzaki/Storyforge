@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Warna · BOSS Design System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  .scale { display:grid; grid-template-columns: repeat(11, 1fr); gap:10px; }
+  .scale .swatch { width:auto; }
+  .scale .chip-color { width:100%; }
+</style>
+</head>
+<body data-page="colors">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Foundations</div>
+      <h1>Warna</h1>
+      <p>Palet BOSS dibangun di sekitar deep navy (Ocean) dan amber (Secondary), didukung skala neutral Slate dan empat sentiment.</p>
+    </header>
+    <div class="content">
+
+      <section class="section">
+        <h2>Brand</h2>
+        <div class="section-divider"></div>
+        <div class="row" style="gap:24px">
+          <div class="swatch"><div class="chip-color" style="background:#FFFFFF; border:1px solid var(--slate-200)"></div><div class="name">white</div><div class="hex">#FFFFFF</div></div>
+          <div class="swatch"><div class="chip-color" style="background:#000000"></div><div class="name">black</div><div class="hex">#000000</div></div>
+          <div class="swatch"><div class="chip-color" style="background:#00305F"></div><div class="name">boss-blue</div><div class="hex">#00305F</div></div>
+          <div class="swatch"><div class="chip-color" style="background:#EDAE2D"></div><div class="name">boss-yellow</div><div class="hex">#EDAE2D</div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Neutrals (Slate)</h3>
+        <div class="scale" id="slate"></div>
+      </section>
+      <section class="section">
+        <h3>Primary (Ocean)</h3>
+        <div class="scale" id="primary"></div>
+      </section>
+      <section class="section">
+        <h3>Secondary (Amber)</h3>
+        <div class="scale" id="secondary"></div>
+      </section>
+
+      <section class="section">
+        <h2>Sentiment</h2>
+        <div class="section-divider"></div>
+        <table class="spec-table">
+          <thead><tr><th>Token</th><th>Penggunaan</th></tr></thead>
+          <tbody>
+            <tr><td><span class="token">info/xxx</span></td><td>Informasi: cards, notice</td></tr>
+            <tr><td><span class="token">positive/xxx</span></td><td>Sukses, sentimen positif</td></tr>
+            <tr><td><span class="token">negative/xxx</span></td><td>Error, sentimen negatif</td></tr>
+            <tr><td><span class="token">warning/xxx</span></td><td>Peringatan, perhatian</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Info (Blue)</h3>
+        <div class="scale" id="info"></div>
+        <h3>Positive (Green)</h3>
+        <div class="scale" id="positive"></div>
+        <h3>Negative (Red)</h3>
+        <div class="scale" id="negative"></div>
+        <h3>Warning (Yellow)</h3>
+        <div class="scale" id="warning"></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+const SCALES = {
+  slate:    {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#F8FAFC','#F1F5F9','#E2E8F0','#CBD5E1','#94A3B8','#64748B','#475569','#334155','#1E293B','#0F172A','#020617']},
+  primary:  {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#E8F0F9','#CCDDED','#99BBDB','#6699C9','#3377B7','#005AA0','#004A85','#003B6B','#00305F','#001E3C','#001229']},
+  secondary:{steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#FEF8E7','#FCEDC2','#FADD8C','#F7CC56','#F2BB30','#EDAE2D','#C68E1F','#9E6E15','#75500D','#4D3508','#2A1D04']},
+  info:     {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#EFF6FF','#DBEAFE','#BFDBFE','#93C5FD','#60A5FA','#3B82F6','#2563EB','#1D4ED8','#1E40AF','#1E3A8A','#172554']},
+  positive: {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#ECFDF5','#D1FAE5','#A7F3D0','#6EE7B7','#34D399','#10B981','#059669','#047857','#065F46','#064E3B','#022C22']},
+  negative: {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#FEF2F2','#FEE2E2','#FECACA','#FCA5A5','#F87171','#EF4444','#DC2626','#B91C1C','#991B1B','#7F1D1D','#450A0A']},
+  warning:  {steps:['50','100','200','300','400','500','600','700','800','900','950'], hex:['#FEFCE8','#FEF3C7','#FDE68A','#FCD34D','#FBBF24','#F59E0B','#D97706','#B45309','#92400E','#78350F','#451A03']},
+};
+Object.entries(SCALES).forEach(([name, {steps, hex}])=>{
+  const el = document.getElementById(name); if(!el) return;
+  el.innerHTML = steps.map((s, i)=>`
+    <div class="swatch">
+      <div class="chip-color" style="background:${hex[i]}; height:64px"></div>
+      <div class="name">${name}/${s}</div>
+      <div class="hex">${hex[i]}</div>
+    </div>`).join('');
+});
+</script>
+</body>
+</html>

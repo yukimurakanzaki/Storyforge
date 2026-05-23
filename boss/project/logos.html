@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Logo & Ilustrasi · BAF</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  .placeholder {
+    width: 96px; height: 96px; border-radius: 999px;
+    background: repeating-linear-gradient(45deg, var(--slate-100), var(--slate-100) 6px, var(--slate-200) 6px, var(--slate-200) 12px);
+    display:grid; place-items:center;
+    font-family: var(--font-mono); font-size: 10px; color: var(--slate-500); text-align:center;
+  }
+  .illus {
+    width: 128px; height: 128px;
+    background-image: url('assets/illustrations.png');
+    background-size: 384px 384px; /* 3x scale of cell size to fit 128px cells */
+    background-repeat: no-repeat;
+  }
+  /* 3x3 grid in source; each cell is 1/3 of 384 = 128px when scaled */
+  .illus-audio    { background-position:    0px    0px; }
+  .illus-devices  { background-position: -128px    0px; }
+  .illus-success  { background-position: -256px    0px; }
+  .illus-upload   { background-position:    0px -128px; }
+  .illus-notfound { background-position: -128px -128px; }
+  .illus-search   { background-position: -256px -128px; }
+  .illus-notif    { background-position:    0px -256px; }
+  .illus-warning  { background-position: -128px -256px; }
+  .illus-password { background-position: -256px -256px; }
+
+  .illus-grid {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:32px 24px;
+    justify-items:center; padding: 16px 8px;
+  }
+  .illus-cell { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .illus-cell .label { font-family: var(--font-mono); font-size: 11px; color: var(--slate-500); }
+  .illus-cell .name  { font-size: 13px; color: var(--slate-800); font-weight:500; }
+
+  .logo-card {
+    flex: 1 1 280px;
+    min-height: 200px;
+    border-radius: 12px;
+    padding: 28px 32px 20px;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+  }
+  .baf-logo { width: 200px; }
+  .baf-logo svg { width: 100%; height: auto; display:block; }
+  .logo-meta { font-family: var(--font-mono); font-size: 11px; color: var(--slate-500); }
+
+  .anat { position:absolute; background: var(--primary-400); opacity:.4; }
+  .anat-top    { left:40px; right:40px; top:32px; height:1px; }
+  .anat-bot    { left:40px; right:40px; bottom:32px; height:1px; }
+  .anat-left   { top:32px; bottom:32px; left:32px; width:1px; }
+  .anat-right  { top:32px; bottom:32px; right:32px; width:1px; }
+  .anat-tag {
+    position:absolute; font-family: var(--font-mono); font-size:10px;
+    color: var(--primary-700); background:#fff; padding: 2px 6px; border-radius: 4px;
+    border:1px solid var(--slate-200);
+  }
+  .anat-tag-h { left:-78px; top:50%; transform: translateY(-50%); }
+  .anat-tag-w { left:50%; bottom:-22px; transform: translateX(-50%); }
+</style>
+</head>
+<body data-page="logos">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Aset</div>
+      <h1>Logo & Ilustrasi</h1>
+      <p>Logo BAF dan set ilustrasi resmi untuk produk dan komunikasi.</p>
+    </header>
+    <div class="content">
+
+      <section class="section">
+        <h2>Logo BAF</h2>
+        <div class="section-divider"></div>
+        <div class="preview" style="display:flex; gap:24px; align-items:stretch; flex-wrap:wrap">
+          <div class="logo-card" style="background:#fff; border:1px solid var(--slate-200)">
+            <div class="baf-logo" style="color:var(--primary-800)">
+              <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" aria-label="BAF">
+                <path fill="currentColor" fill-rule="evenodd" d="M0 10 H42 C58 10 68 18 68 32 C68 46 60 54 50 58 C64 60 72 70 72 86 C72 102 60 110 40 110 H0 Z M18 26 H36 C44 26 48 30 48 38 C48 46 44 50 36 50 H18 Z M18 68 H40 C50 68 54 74 54 84 C54 94 50 96 40 96 H18 Z"/>
+                <path fill="currentColor" d="M130 10 L150 10 L127.6 66 L107.6 66 Z"/>
+                <path fill="currentColor" d="M104.4 74 L124.4 74 L110 110 L90 110 Z"/>
+                <path fill="var(--secondary-500)" d="M150 10 L170 10 L192.4 66 L172.4 66 Z"/>
+                <path fill="var(--secondary-500)" d="M175.6 74 L195.6 74 L210 110 L190 110 Z"/>
+                <path fill="currentColor" d="M235 10 H310 V30 H256 V52 H290 V70 H256 V110 H235 Z"/>
+              </svg>
+            </div>
+            <div class="logo-meta">Primary · di atas putih</div>
+          </div>
+
+          <div class="logo-card" style="background:var(--primary-800)">
+            <div class="baf-logo" style="color:#fff">
+              <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" aria-label="BAF">
+                <path fill="currentColor" fill-rule="evenodd" d="M0 10 H42 C58 10 68 18 68 32 C68 46 60 54 50 58 C64 60 72 70 72 86 C72 102 60 110 40 110 H0 Z M18 26 H36 C44 26 48 30 48 38 C48 46 44 50 36 50 H18 Z M18 68 H40 C50 68 54 74 54 84 C54 94 50 96 40 96 H18 Z"/>
+                <path fill="currentColor" d="M130 10 L150 10 L127.6 66 L107.6 66 Z"/>
+                <path fill="currentColor" d="M104.4 74 L124.4 74 L110 110 L90 110 Z"/>
+                <path fill="var(--secondary-500)" d="M150 10 L170 10 L192.4 66 L172.4 66 Z"/>
+                <path fill="var(--secondary-500)" d="M175.6 74 L195.6 74 L210 110 L190 110 Z"/>
+                <path fill="currentColor" d="M235 10 H310 V30 H256 V52 H290 V70 H256 V110 H235 Z"/>
+              </svg>
+            </div>
+            <div class="logo-meta" style="color:rgba(255,255,255,.7)">Reversed · di atas primary/800</div>
+          </div>
+
+          <div class="logo-card" style="background:var(--secondary-500)">
+            <div class="baf-logo" style="color:var(--primary-900)">
+              <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" aria-label="BAF">
+                <path fill="currentColor" fill-rule="evenodd" d="M0 10 H42 C58 10 68 18 68 32 C68 46 60 54 50 58 C64 60 72 70 72 86 C72 102 60 110 40 110 H0 Z M18 26 H36 C44 26 48 30 48 38 C48 46 44 50 36 50 H18 Z M18 68 H40 C50 68 54 74 54 84 C54 94 50 96 40 96 H18 Z"/>
+                <path fill="currentColor" d="M130 10 L150 10 L127.6 66 L107.6 66 Z"/>
+                <path fill="currentColor" d="M104.4 74 L124.4 74 L110 110 L90 110 Z"/>
+                <path fill="#fff" d="M150 10 L170 10 L192.4 66 L172.4 66 Z"/>
+                <path fill="#fff" d="M175.6 74 L195.6 74 L210 110 L190 110 Z"/>
+                <path fill="currentColor" d="M235 10 H310 V30 H256 V52 H290 V70 H235 Z M235 70 H256 V110 H235 Z" />
+              </svg>
+            </div>
+            <div class="logo-meta" style="color:var(--primary-900); opacity:.7">Monokrom · di atas amber</div>
+          </div>
+        </div>
+
+        <h3>Anatomi</h3>
+        <div class="preview" style="background:var(--slate-50); padding:32px">
+          <div style="display:flex; align-items:center; gap:48px; flex-wrap:wrap">
+            <div style="position:relative; padding:40px">
+              <div class="baf-logo" style="color:var(--primary-800); width:240px">
+                <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" aria-label="BAF">
+                  <path fill="currentColor" fill-rule="evenodd" d="M0 10 H42 C58 10 68 18 68 32 C68 46 60 54 50 58 C64 60 72 70 72 86 C72 102 60 110 40 110 H0 Z M18 26 H36 C44 26 48 30 48 38 C48 46 44 50 36 50 H18 Z M18 68 H40 C50 68 54 74 54 84 C54 94 50 96 40 96 H18 Z"/>
+                  <path fill="currentColor" d="M130 10 L150 10 L127.6 66 L107.6 66 Z"/>
+                  <path fill="currentColor" d="M104.4 74 L124.4 74 L110 110 L90 110 Z"/>
+                  <path fill="var(--secondary-500)" d="M150 10 L170 10 L192.4 66 L172.4 66 Z"/>
+                  <path fill="var(--secondary-500)" d="M175.6 74 L195.6 74 L210 110 L190 110 Z"/>
+                  <path fill="currentColor" d="M235 10 H310 V30 H256 V52 H290 V70 H256 V110 H235 Z"/>
+                </svg>
+              </div>
+              <span class="anat anat-top"></span>
+              <span class="anat anat-bot"></span>
+              <span class="anat anat-left"></span>
+              <span class="anat anat-right"></span>
+              <span class="anat-tag anat-tag-h">tinggi · 1x</span>
+              <span class="anat-tag anat-tag-w">clear-space · 0.5x</span>
+            </div>
+            <div style="max-width:280px; font-size:13px; color:var(--slate-700); line-height:1.7">
+              <p style="margin:0 0 12px"><strong style="color:var(--slate-900)">Clear space</strong> minimum: setengah tinggi logo di setiap sisi.</p>
+              <p style="margin:0"><strong style="color:var(--slate-900)">Wedge amber</strong> pada huruf A adalah identitas — tidak boleh dihilangkan, diubah warnanya, atau dipisahkan dari huruf.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>Aturan</h3>
+        <ul style="line-height:2; color:var(--slate-700); font-size:14px">
+          <li>Selalu pertahankan wedge amber <span class="token">secondary/500</span> pada huruf A</li>
+          <li>Minimum tinggi cetak: 24px / 0.5cm</li>
+          <li>Clear space minimum: setengah tinggi logo</li>
+          <li>Jangan miringkan, regangkan, ganti warna, atau tambahkan efek pada logo</li>
+          <li>Jangan letakkan di atas latar foto tanpa overlay gelap</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Ilustrasi</h2>
+        <div class="section-divider"></div>
+        <p class="muted" style="font-size:13px">Set ilustrasi resmi BOSS untuk empty state, status, dan moment edukatif. Gunakan pada ukuran 96–160px; bingkai lingkaran abu sudah termasuk.</p>
+        <div class="preview">
+          <div class="illus-grid">
+            <div class="illus-cell"><div class="illus illus-audio"></div><div class="name">Audio · Koneksi</div><div class="label">audio-connect</div></div>
+            <div class="illus-cell"><div class="illus illus-devices"></div><div class="name">Perangkat Terhubung</div><div class="label">devices-paired</div></div>
+            <div class="illus-cell"><div class="illus illus-success"></div><div class="name">Berhasil</div><div class="label">success</div></div>
+            <div class="illus-cell"><div class="illus illus-upload"></div><div class="name">Unggah Dokumen</div><div class="label">upload</div></div>
+            <div class="illus-cell"><div class="illus illus-notfound"></div><div class="name">Tidak Ditemukan</div><div class="label">not-found</div></div>
+            <div class="illus-cell"><div class="illus illus-search"></div><div class="name">Pencarian</div><div class="label">search</div></div>
+            <div class="illus-cell"><div class="illus illus-notif"></div><div class="name">Notifikasi</div><div class="label">notification</div></div>
+            <div class="illus-cell"><div class="illus illus-warning"></div><div class="name">Peringatan</div><div class="label">warning</div></div>
+            <div class="illus-cell"><div class="illus illus-password"></div><div class="name">Kata Sandi</div><div class="label">password</div></div>
+          </div>
+        </div>
+
+        <h3>Aturan Pemakaian</h3>
+        <ul style="line-height:2; color:var(--slate-700); font-size:14px">
+          <li>Gunakan pada latar putih atau <span class="token">slate/50</span>; jangan letakkan di atas warna jenuh</li>
+          <li>Ukuran minimum 64px, optimal 96–160px; jangan diperbesar &gt;240px</li>
+          <li>Jangan mengganti warna, memutar, atau memberi bayangan tambahan</li>
+          <li>Pasangkan dengan judul jelas — ilustrasi mendukung pesan, bukan menggantikannya</li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+</body>
+</html>

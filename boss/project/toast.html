@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Toast · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body data-page="toast">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Components</div>
+      <h1>Toast</h1>
+      <p>Notifikasi non-blocking. Empat sentiment × dua intensitas (bold / soft).</p>
+    </header>
+    <div class="content">
+
+      <section class="section">
+        <h2>Varian</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <div class="grid-2" style="gap:14px">
+            <div class="toast toast-info-bold"><span class="icn">ℹ</span><div><h4>Toast title</h4><p>Pesan informasi singkat untuk pengguna.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-info-soft"><span class="icn">ℹ</span><div><h4>Toast title</h4><p>Pesan informasi singkat untuk pengguna.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-positive-bold"><span class="icn">✓</span><div><h4>Toast title</h4><p>Aksi berhasil dilakukan.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-positive-soft"><span class="icn">✓</span><div><h4>Toast title</h4><p>Aksi berhasil dilakukan.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-negative-bold"><span class="icn">✕</span><div><h4>Toast title</h4><p>Terjadi kesalahan, coba lagi.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-negative-soft"><span class="icn">✕</span><div><h4>Toast title</h4><p>Terjadi kesalahan, coba lagi.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-warning-bold"><span class="icn">⚠</span><div><h4>Toast title</h4><p>Perhatian — periksa kembali input Anda.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+            <div class="toast toast-warning-soft"><span class="icn">⚠</span><div><h4>Toast title</h4><p>Perhatian — periksa kembali input Anda.</p><span class="action">Aksi di sini</span></div><button class="close">✕</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Live demo</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <div class="row">
+            <button class="btn btn-primary" data-toast="info">Info</button>
+            <button class="btn btn-positive" data-toast="positive">Positive</button>
+            <button class="btn btn-destructive" data-toast="negative">Negative</button>
+            <button class="btn btn-secondary" data-toast="warning">Warning</button>
+          </div>
+          <div id="toastBox" style="position:fixed; right:24px; bottom:24px; display:flex; flex-direction:column; gap:8px; z-index:50"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+document.querySelectorAll('.toast .close').forEach(b=>b.addEventListener('click',e=>e.currentTarget.closest('.toast').style.display='none'));
+const titles = { info:'Info', positive:'Berhasil', negative:'Gagal', warning:'Peringatan' };
+const icons  = { info:'ℹ', positive:'✓', negative:'✕', warning:'⚠' };
+document.querySelectorAll('[data-toast]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const k = b.dataset.toast;
+    const el = document.createElement('div');
+    el.className = `toast toast-${k}-soft`; el.style.boxShadow='var(--elevation-2)';
+    el.innerHTML = `<span class="icn">${icons[k]}</span><div><h4>${titles[k]}</h4><p>Toast contoh untuk demo.</p></div><button class="close">✕</button>`;
+    el.querySelector('.close').addEventListener('click', ()=>el.remove());
+    document.getElementById('toastBox').appendChild(el);
+    setTimeout(()=>el.remove(), 4000);
+  });
+});
+</script>
+</body>
+</html>

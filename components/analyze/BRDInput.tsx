@@ -52,7 +52,7 @@ export function BRDInput({
         onChange={(e) => onChange(e.target.value)}
         rows={20}
         placeholder="Paste BRD kamu di sini..."
-        className="w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        className="w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-300"
       />
 
       {overLimit && (
@@ -71,7 +71,7 @@ export function BRDInput({
           onClick={() => onAnalyze(value)}
           className="flex-1"
         >
-          Analyze BRD
+          Analisis BRD
         </Button>
         <Button
           variant="secondary"

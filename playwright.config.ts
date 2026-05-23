@@ -12,6 +12,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    extraHTTPHeaders: {
+      'x-e2e-test': 'true',
+    },
   },
   webServer: {
     command: `npm.cmd run dev -- --hostname 127.0.0.1 --port ${port}`,

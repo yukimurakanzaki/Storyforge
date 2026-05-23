@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Navigation · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* Figma-spec navigation pieces */
+  .nav-frame { background:#064077; border:1px dashed #9747FF; border-radius:5px; padding:20px; display:flex; flex-direction:column; gap:8px; width:276px; box-sizing:border-box; }
+  .nav-frame-light { background:transparent; border:1px dashed #9747FF; border-radius:5px; padding:20px; display:flex; flex-direction:column; gap:0; width:276px; box-sizing:border-box; }
+
+  .left-nav-item { display:flex; flex-direction:row; align-items:center; padding:8px 16px; gap:8px; height:36px; border-radius:8px; color:#fff; font-family: var(--font-body); font-size:14px; line-height:20px; font-weight:400; box-sizing:border-box; cursor:pointer; }
+  .left-nav-item .icn { width:20px; height:20px; flex:none; display:grid; place-items:center; }
+  .left-nav-item .label { flex:1; }
+  .left-nav-item .chev { width:20px; height:20px; flex:none; display:grid; place-items:center; }
+  .left-nav-item.is-selected { background:#4C73A5; box-shadow: var(--elevation-1); }
+
+  .profile-card { display:flex; flex-direction:row; align-items:center; padding:0; gap:12px; height:40px; border-radius:8px; }
+  .profile-avatar {
+    width:32px; height:32px; border-radius:40px; background:#EDAE2D; border:2px solid #FFFFFF;
+    overflow:hidden; flex:none; display:grid; place-items:center; color:#064077; font-weight:700; font-family:var(--font-display); font-size:12px;
+  }
+  .profile-text { display:flex; flex-direction:column; gap:4px; }
+  .profile-text .row-line { display:flex; align-items:center; gap:4px; }
+  .profile-text .lbl { font-family: var(--font-body); font-weight:500; font-size:10px; line-height:12px; color:#FFFFFF; }
+  .profile-text .val { font-family: var(--font-body); font-weight:700; font-size:12px; line-height:18px; color:#FFFFFF; }
+
+  .top-nav-row { display:flex; flex-direction:row; align-items:center; padding:0; width:100%; max-width:1440px; }
+  .top-nav-logo { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding:12px 24px; gap:10px; width:268px; height:64px; background:#064077; box-sizing:border-box; }
+  .top-nav-main { display:flex; flex-direction:row; align-items:center; padding:12px 24px; gap:8px; flex:1; height:64px; background:#064077; box-sizing:border-box; color:#fff; }
+  .top-nav-main .doc-icn { width:20px; height:20px; flex:none; display:grid; place-items:center; }
+  .top-nav-title { flex:1; font-family: var(--font-display); font-size:20px; line-height:28px; font-weight:700; color:#FFFFFF; }
+  .top-nav-avatar { width:32px; height:32px; border-radius:40px; background:#EDAE2D; border:2px solid #FFFFFF; overflow:hidden; flex:none; display:grid; place-items:center; color:#064077; font-weight:700; font-family:var(--font-display); font-size:12px; }
+
+  /* BAF logo mark — bold geometric, white B/F + amber A */
+  .baf-mark { display:inline-block; line-height:0; }
+  .baf-mark svg { display:block; height:28px; width:auto; }
+</style>
+</head>
+<body data-page="navigation">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Components</div>
+      <h1>Navigation</h1>
+      <p>Item sidebar (default & selected), kartu profil pengguna, dan top navigation bar — sesuai spesifikasi Figma.</p>
+    </header>
+    <div class="content">
+
+      <section class="section">
+        <h2>Sidebar nav item</h2>
+        <div class="section-divider"></div>
+        <p class="muted" style="font-size:13px">Frame 276×134 · padding 20 · gap (item) 36+6 · selected pakai background <span class="token">#4C73A5</span> + elevation/1</p>
+        <div class="nav-frame">
+          <div class="left-nav-item" aria-label="Not Selected">
+            <span class="icn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.33 8.33L10 3.33l6.67 5v8.34a1.67 1.67 0 0 1-1.67 1.66H5a1.67 1.67 0 0 1-1.67-1.66V8.33z" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/><path d="M8.33 17.5v-5h3.34v5" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="label">Home</span>
+            <span class="chev">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="#FFFFFF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+          <div class="left-nav-item is-selected" aria-label="Selected">
+            <span class="icn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.33 8.33L10 3.33l6.67 5v8.34a1.67 1.67 0 0 1-1.67 1.66H5a1.67 1.67 0 0 1-1.67-1.66V8.33z" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/><path d="M8.33 17.5v-5h3.34v5" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="label">Home</span>
+            <span class="chev">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="#FFFFFF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <table class="spec-table" style="margin-top:24px">
+          <thead><tr><th>Token</th><th>State=Not Selected</th><th>State=Selected</th></tr></thead>
+          <tbody>
+            <tr><td><span class="token">background</span></td><td>transparent</td><td>#4C73A5</td></tr>
+            <tr><td><span class="token">shadow</span></td><td>none</td><td>elevation/1 — 0 4 16 rgba(0,48,95,.10)</td></tr>
+            <tr><td><span class="token">radius</span></td><td>8</td><td>8</td></tr>
+            <tr><td><span class="token">padding</span></td><td>8 / 16</td><td>8 / 16</td></tr>
+            <tr><td><span class="token">label</span></td><td colspan="2">Inter Regular 14 / 20 · #FFFFFF</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Kartu profil</h2>
+        <div class="section-divider"></div>
+        <p class="muted" style="font-size:13px">Dua tipe — Admin Network &amp; BAF Care. Frame 276×140 padding 20.</p>
+        <div class="nav-frame" style="gap:20px">
+          <div class="profile-card" aria-label="Type=Admin Network">
+            <div class="profile-avatar">EA</div>
+            <div class="profile-text">
+              <div class="row-line"><span class="lbl">Login as:</span><span class="val">Edwin[LND-MDP]</span></div>
+              <div class="row-line"><span class="lbl">Position:</span><span class="val">Admin Network</span></div>
+            </div>
+          </div>
+          <div class="profile-card" aria-label="Type=BAF Care">
+            <div class="profile-avatar">EA</div>
+            <div class="profile-text">
+              <div class="row-line"><span class="lbl">Login as:</span><span class="val">Edwin[LND-MDP]</span></div>
+              <div class="row-line"><span class="lbl">Position:</span><span class="val">BAF Care</span></div>
+            </div>
+          </div>
+        </div>
+
+        <table class="spec-table" style="margin-top:24px">
+          <thead><tr><th>Element</th><th>Spec</th></tr></thead>
+          <tbody>
+            <tr><td><span class="token">avatar</span></td><td>32×32 · #EDAE2D · border 2 #FFFFFF · radius 40</td></tr>
+            <tr><td><span class="token">label</span></td><td>Inter Medium 10 / 12 · #FFFFFF</td></tr>
+            <tr><td><span class="token">value</span></td><td>Inter Bold 12 / 18 · #FFFFFF</td></tr>
+            <tr><td><span class="token">gap</span></td><td>12 (avatar↔text) · 4 (label↔value) · 4 (rows)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Top navigation bar</h2>
+        <div class="section-divider"></div>
+        <p class="muted" style="font-size:13px">1440×64 · brand pocket 268 px lalu title bar dengan icon dokumen &amp; avatar profil di kanan.</p>
+        <div class="top-nav-row" style="box-shadow:var(--elevation-1); border-radius:4px; overflow:hidden">
+          <div class="top-nav-logo">
+            <div class="baf-mark" aria-label="BAF">
+              <svg viewBox="22 17 67 30" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#FFFFFF" d="M39.5735 31.7897C41.3358 30.8539 43.9211 28.7535 43.9211 25.8642C43.9211 21.9265 40.2839 18.8903 35.8577 18.8903H27.043C26.8546 18.8903 26.6739 18.9652 26.5407 19.0984C26.4075 19.2316 26.3326 19.4123 26.3326 19.6007V39.7779H24.7138C24.5245 39.7779 24.3429 39.8531 24.2091 39.987C24.0752 40.1209 24 40.3024 24 40.4917V44.4295C24.0009 44.6182 24.0765 44.7989 24.2103 44.932C24.344 45.0651 24.5251 45.1399 24.7138 45.1399H36.4212C40.885 45.1399 44.5973 42.1037 44.5973 37.903C44.5973 34.4536 41.5578 32.6162 39.5735 31.7897ZM32.2581 24.2762H35.1849C35.5262 24.2656 35.8661 24.3239 36.1843 24.4474C36.5026 24.571 36.7928 24.7574 37.0375 24.9954C37.2822 25.2335 37.4766 25.5183 37.6089 25.8331C37.7413 26.1478 37.8089 26.4859 37.8078 26.8273C37.8151 27.5322 37.5435 28.2113 37.0522 28.7167C36.5609 29.2221 35.8897 29.5128 35.1849 29.5254H31.6945V24.2898L32.2581 24.2762ZM35.6733 39.7643H31.6945V34.4024H35.2976C36.7593 34.4024 38.3713 35.526 38.3713 37.0253C38.3768 37.7487 38.0951 38.4448 37.588 38.9608C37.081 39.4769 36.3899 39.7707 35.6665 39.7779L35.6733 39.7643Z"/>
+                <path fill="#FFFFFF" d="M87.3523 18.8903H73.8689C73.4315 18.8899 72.9983 18.9757 72.5941 19.1429C72.1899 19.3101 71.8226 19.5553 71.5134 19.8646C71.2041 20.1739 70.9588 20.5412 70.7916 20.9454C70.6244 21.3496 70.5386 21.7828 70.5391 22.2202V44.4193C70.5391 44.6077 70.6139 44.7884 70.7471 44.9216C70.8803 45.0548 71.061 45.1296 71.2494 45.1296H75.6893C75.8761 45.1237 76.0537 45.0471 76.1862 44.9152C76.3187 44.7833 76.3962 44.6061 76.403 44.4193V34.8907H80.9624C81.1638 34.8993 81.3622 34.839 81.5248 34.7198C81.6874 34.6006 81.8046 34.4297 81.8572 34.235L83.3155 30.7993C83.5853 30.147 83.1447 29.7986 82.7998 29.7986H76.3894V24.4025H85.3646C85.5828 24.4107 85.7972 24.3445 85.9728 24.2148C86.1485 24.0851 86.2748 23.8996 86.3311 23.6887C86.3311 23.6887 87.7656 20.3145 87.909 19.973C88.2027 19.2694 87.7246 18.8903 87.3523 18.8903Z"/>
+                <path fill="#FFFFFF" d="M68.9958 44.1759L59.4605 23.6844L56.5507 30.1529H56.5882L59.4024 36.2696H55.6456C55.4461 36.262 55.2499 36.3224 55.0892 36.441C54.9285 36.5595 54.8128 36.7291 54.7611 36.9219C54.7611 36.9219 53.453 39.9956 53.3233 40.3133C53.0535 40.9553 53.4906 41.3037 53.8287 41.3037H61.6223L62.9543 44.2271C63.2958 44.9307 63.5861 45.1527 64.252 45.1527H68.3503C68.4712 45.1681 68.5941 45.1494 68.7048 45.0986C68.8156 45.0478 68.91 44.9669 68.9772 44.8652C69.0444 44.7636 69.0817 44.6451 69.085 44.5232C69.0883 44.4014 69.0574 44.2811 68.9958 44.1759Z"/>
+                <path fill="#EDAE2D" d="M57.4049 19.2482C57.3439 19.1314 57.2536 19.0325 57.1428 18.9612C57.032 18.89 56.9046 18.8488 56.773 18.8418H56.4042C56.2727 18.8488 56.1452 18.89 56.0344 18.9612C55.9236 19.0325 55.8333 19.1314 55.7724 19.2482L44.181 44.1795C44.1256 44.2831 44.099 44.3998 44.1041 44.5173C44.1092 44.6347 44.1458 44.7486 44.2101 44.8471C44.2743 44.9456 44.3639 45.0249 44.4693 45.0769C44.5747 45.1289 44.6922 45.1516 44.8095 45.1426H48.8838C49.1711 45.1516 49.454 45.071 49.6933 44.9119C49.9326 44.7527 50.1164 44.523 50.2192 44.2546L56.5511 30.1428L59.4608 23.6744L57.4049 19.2482Z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="top-nav-main">
+            <span class="doc-icn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 2.5h7.5L16.25 6.25V17.5H5z" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/><path d="M12.5 2.5v3.75h3.75" stroke="#FFFFFF" stroke-width="1.25" stroke-linejoin="round"/><path d="M8.75 13.33l2.5-2.5 2.5 2.5" stroke="#FFFFFF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <div class="top-nav-title">Top Navigation Title</div>
+            <div class="top-nav-avatar">EA</div>
+          </div>
+        </div>
+
+        <table class="spec-table" style="margin-top:24px">
+          <thead><tr><th>Region</th><th>Spec</th></tr></thead>
+          <tbody>
+            <tr><td><span class="token">brand pocket</span></td><td>268×64 · padding 12 24 · #064077</td></tr>
+            <tr><td><span class="token">title bar</span></td><td>flex · padding 12 24 · gap 8 · #064077</td></tr>
+            <tr><td><span class="token">title text</span></td><td>Outfit Bold 20 / 28 · #FFFFFF</td></tr>
+            <tr><td><span class="token">icon</span></td><td>20×20 · stroke 1.25 · #FFFFFF</td></tr>
+            <tr><td><span class="token">avatar</span></td><td>32×32 · #EDAE2D · border 2 #FFFFFF · radius 40</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Kode</h2>
+        <div class="section-divider"></div>
+        <pre class="code"><span class="c">// sidebar item</span>
+&lt;<span class="k">div</span> <span class="k">class</span>=<span class="s">"left-nav-item is-selected"</span>&gt;
+  &lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"icn"</span>&gt;…&lt;/<span class="k">span</span>&gt;
+  &lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"label"</span>&gt;Home&lt;/<span class="k">span</span>&gt;
+  &lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"chev"</span>&gt;…&lt;/<span class="k">span</span>&gt;
+&lt;/<span class="k">div</span>&gt;
+
+<span class="c">// profile card</span>
+&lt;<span class="k">div</span> <span class="k">class</span>=<span class="s">"profile-card"</span>&gt;
+  &lt;<span class="k">div</span> <span class="k">class</span>=<span class="s">"profile-avatar"</span>&gt;EA&lt;/<span class="k">div</span>&gt;
+  &lt;<span class="k">div</span> <span class="k">class</span>=<span class="s">"profile-text"</span>&gt;…&lt;/<span class="k">div</span>&gt;
+&lt;/<span class="k">div</span>&gt;</pre>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+</body>
+</html>

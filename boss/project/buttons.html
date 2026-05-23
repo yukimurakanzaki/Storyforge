@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Buttons · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body data-page="buttons">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Components</div>
+      <h1>Buttons</h1>
+      <p>Hierarki: Primary untuk aksi utama, Secondary untuk pendukung, Tertiary untuk aksi inline. Destructive & Positive untuk sentiment.</p>
+    </header>
+    <div class="content">
+      <section class="section">
+        <h2>Varian × State</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <table style="border-collapse:separate; border-spacing:16px 12px">
+            <thead><tr><td></td><td class="muted" style="font-size:12px">enabled</td><td class="muted" style="font-size:12px">hover</td><td class="muted" style="font-size:12px">disabled</td></tr></thead>
+            <tbody>
+              <tr><td class="muted" style="font-size:12px">primary</td><td><button class="btn btn-primary">💬 Button</button></td><td><button class="btn btn-primary" style="background:var(--primary-700)">💬 Button</button></td><td><button class="btn btn-primary" disabled>💬 Button</button></td></tr>
+              <tr><td class="muted" style="font-size:12px">secondary</td><td><button class="btn btn-secondary">💬 Button</button></td><td><button class="btn btn-secondary" style="background:var(--primary-50)">💬 Button</button></td><td><button class="btn btn-secondary" disabled>💬 Button</button></td></tr>
+              <tr><td class="muted" style="font-size:12px">tertiary</td><td><button class="btn btn-tertiary">💬 Button</button></td><td><button class="btn btn-tertiary" style="background:var(--primary-50)">💬 Button</button></td><td><button class="btn btn-tertiary" disabled>💬 Button</button></td></tr>
+              <tr><td class="muted" style="font-size:12px">destructive</td><td><button class="btn btn-destructive">💬 Button</button></td><td><button class="btn btn-destructive" style="background:var(--negative-600)">💬 Button</button></td><td><button class="btn btn-destructive" disabled>💬 Button</button></td></tr>
+              <tr><td class="muted" style="font-size:12px">positive</td><td><button class="btn btn-positive">💬 Button</button></td><td><button class="btn btn-positive" style="background:var(--positive-700)">💬 Button</button></td><td><button class="btn btn-positive" disabled>💬 Button</button></td></tr>
+              <tr><td class="muted" style="font-size:12px">destructive tertiary</td><td><button class="btn btn-warning-tertiary">💬 Button</button></td><td><button class="btn btn-warning-tertiary" style="background:var(--negative-50)">💬 Button</button></td><td><button class="btn btn-warning-tertiary" disabled>💬 Button</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Live demo — klik untuk merasakan ripple</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <div class="row">
+            <button class="btn btn-primary" id="liveBtn">Klik saya</button>
+            <button class="btn btn-secondary">Pengaturan</button>
+            <button class="btn btn-positive">Setujui</button>
+            <button class="btn btn-destructive">Tolak</button>
+          </div>
+          <div id="status" class="muted" style="margin-top:12px; font-size:12px">Menunggu klik…</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Kode</h2>
+        <div class="section-divider"></div>
+        <pre class="code">&lt;<span class="k">button</span> <span class="k">class</span>=<span class="s">"btn btn-primary"</span>&gt;Setujui&lt;/<span class="k">button</span>&gt;
+&lt;<span class="k">button</span> <span class="k">class</span>=<span class="s">"btn btn-secondary"</span>&gt;Batal&lt;/<span class="k">button</span>&gt;
+&lt;<span class="k">button</span> <span class="k">class</span>=<span class="s">"btn btn-tertiary"</span>&gt;Lihat&lt;/<span class="k">button</span>&gt;</pre>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+let n = 0;
+document.getElementById('liveBtn').addEventListener('click', () => {
+  n++; document.getElementById('status').textContent = `Diklik ${n} kali`;
+});
+</script>
+</body>
+</html>
