@@ -296,7 +296,7 @@ export function RefinementChat({
                       {msg.isStreaming && (
                         <span
                           aria-hidden="true"
-                          className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 align-middle animate-pulse"
+                          className="inline-block w-0.5 h-4 bg-teal-500 ml-0.5 align-middle animate-pulse motion-reduce:animate-none"
                         />
                       )}
                     </p>
@@ -313,7 +313,7 @@ export function RefinementChat({
                       {[0, 1, 2].map((i) => (
                         <span
                           key={i}
-                          className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                          className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce motion-reduce:animate-none"
                           style={{ animationDelay: `${i * 0.15}s` }}
                         />
                       ))}
@@ -356,7 +356,7 @@ export function RefinementChat({
                   onKeyDown={handleKeyDown}
                   disabled={isInputDisabled || isRefining}
                   rows={1}
-                  placeholder="Tambah konteks, jawab pertanyaan, atau iterasi... (Enter kirim · Shift+Enter baris baru)"
+                  placeholder="Tambah konteks, jawab pertanyaan, atau iterasi..."
                   className={[
                     'w-full resize-none rounded-xl border px-4 py-3 text-sm max-h-48 overflow-y-auto',
                     'placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors',
@@ -368,11 +368,16 @@ export function RefinementChat({
                       : 'bg-white text-gray-800',
                   ].join(' ')}
                 />
-                {(nearLimit || overLimit) && (
-                  <p className={`mt-1 text-xs ${overLimit ? 'text-red-500' : 'text-yellow-600'}`}>
-                    {charCount.toLocaleString('id-ID')} / {MAX_CHARS.toLocaleString('id-ID')}
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-gray-400 select-none">
+                    Enter kirim · Shift+Enter baris baru
                   </p>
-                )}
+                  {(nearLimit || overLimit) && (
+                    <p className={`text-xs ${overLimit ? 'text-red-500' : 'text-yellow-600'}`}>
+                      {charCount.toLocaleString('id-ID')} / {MAX_CHARS.toLocaleString('id-ID')}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={handleSend}
@@ -395,9 +400,9 @@ export function RefinementChat({
         <div className="hidden lg:flex flex-col w-80 flex-shrink-0 border-l border-gray-200 bg-gray-50 min-h-0">
 
           {/* Scrollable analysis content */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+          <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
             {/* Readiness badge */}
-            <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 mb-3 ${readinessStyle?.cls}`}>
+            <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 ${readinessStyle?.cls}`}>
               <span className="text-xl font-black tabular-nums leading-none">{result.readinessScore}</span>
               <span className="text-xs opacity-60">/100</span>
               <span className="opacity-25 mx-0.5">·</span>
@@ -527,7 +532,7 @@ export function RefinementChat({
                 >
                   {isFinalizing ? (
                     <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin motion-reduce:animate-none" />
                       Membuat User Stories...
                     </span>
                   ) : (

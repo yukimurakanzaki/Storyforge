@@ -47,7 +47,7 @@ export function QACards({
         {resolvedCount > 0 && (
           <button
             onClick={() => setShowResolved((v) => !v)}
-            className="text-xs text-indigo-600 hover:text-indigo-700"
+            className="text-xs text-teal-600 hover:text-teal-700"
           >
             {showResolved ? 'Sembunyikan' : `Sudah Dijawab (${resolvedCount})`}
           </button>

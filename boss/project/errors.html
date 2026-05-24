@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Halaman Error · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  .err-frame { background: var(--slate-900); border-radius: 12px; padding: 32px; min-height: 360px; display:grid; place-items:center; }
+  .err-card { background:#fff; border-radius: 12px; box-shadow: var(--elevation-3); width: 320px; padding: 24px; text-align:center; position:relative; }
+  .err-card .x { position:absolute; top:12px; right:14px; color:var(--slate-400); cursor:pointer; }
+  .err-card .ic { width:64px; height:64px; border-radius:999px; background:var(--slate-100); display:grid; place-items:center; margin: 8px auto 12px; font-size:28px; }
+</style>
+</head>
+<body data-page="errors">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Pola</div>
+      <h1>Halaman Error</h1>
+      <p>Pesan kesalahan ditampilkan dalam modal kompak di atas latar gelap, dengan ilustrasi & tombol konfirmasi.</p>
+    </header>
+    <div class="content">
+
+      <section class="section">
+        <div class="grid-2" style="grid-template-columns: repeat(2, 1fr); gap:24px">
+
+          <div>
+            <div style="background:var(--info-500); color:#fff; padding:8px; text-align:center; border-radius: 8px 8px 0 0; font-weight:600">Error 400</div>
+            <div class="err-frame" style="border-radius:0 0 12px 12px">
+              <div class="err-card">
+                <span class="x">✕</span>
+                <h4 style="margin:0; font-family:var(--font-display); color:var(--slate-900)">Bad Request</h4>
+                <div class="ic">⚠</div>
+                <p class="muted" style="font-size:13px; margin: 0 0 16px">Ups, ada yang salah dengan permintaanmu. Coba periksa kembali data yang kamu masukkan.</p>
+                <button class="btn btn-secondary btn-sm" style="width:100%; justify-content:center">✓ Ya, saya mengerti</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="background:var(--info-500); color:#fff; padding:8px; text-align:center; border-radius: 8px 8px 0 0; font-weight:600">Error 404</div>
+            <div class="err-frame" style="border-radius:0 0 12px 12px">
+              <div class="err-card">
+                <span class="x">✕</span>
+                <h4 style="margin:0; font-family:var(--font-display); color:var(--slate-900)">Not Found</h4>
+                <div class="ic">📄</div>
+                <p class="muted" style="font-size:13px; margin: 0 0 16px">Halaman yang kamu cari tidak ditemukan. Pastikan alamat URL benar atau kembali ke beranda.</p>
+                <button class="btn btn-secondary btn-sm" style="width:100%; justify-content:center">✓ Ya, saya mengerti</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="background:var(--info-500); color:#fff; padding:8px; text-align:center; border-radius: 8px 8px 0 0; font-weight:600">Error 500</div>
+            <div class="err-frame" style="border-radius:0 0 12px 12px">
+              <div class="err-card">
+                <span class="x">✕</span>
+                <h4 style="margin:0; font-family:var(--font-display); color:var(--slate-900)">Server Error</h4>
+                <div class="ic">🛠</div>
+                <p class="muted" style="font-size:13px; margin: 0 0 16px">Maaf, server kami sedang bermasalah. Silakan coba beberapa saat lagi.</p>
+                <button class="btn btn-secondary btn-sm" style="width:100%; justify-content:center">✓ Ya, saya mengerti</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="background:var(--info-500); color:#fff; padding:8px; text-align:center; border-radius: 8px 8px 0 0; font-weight:600">RTO / Offline</div>
+            <div class="err-frame" style="border-radius:0 0 12px 12px">
+              <div class="err-card">
+                <span class="x">✕</span>
+                <h4 style="margin:0; font-family:var(--font-display); color:var(--slate-900)">Tidak Terhubung</h4>
+                <div class="ic">📡</div>
+                <p class="muted" style="font-size:13px; margin: 0 0 16px">Server tidak menanggapi, periksa koneksi internet Anda.</p>
+                <button class="btn btn-secondary btn-sm" style="width:100%; justify-content:center">✓ Ya, saya mengerti</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+</body>
+</html>

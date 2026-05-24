@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Chips · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body data-page="chips">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Components</div>
+      <h1>Chips</h1>
+      <p>Chip menampilkan status singkat. Tiga gaya: bold, soft, outline. Lima warna sentiment.</p>
+    </header>
+    <div class="content">
+      <section class="section">
+        <h2>Sistem chip</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <table style="border-collapse:separate; border-spacing:14px 10px">
+            <thead><tr><td></td><td class="muted" style="font-size:12px">bold</td><td class="muted" style="font-size:12px">soft</td><td class="muted" style="font-size:12px">outline</td></tr></thead>
+            <tbody id="chipGrid"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Penggunaan dalam aplikasi</h2>
+        <div class="section-divider"></div>
+        <div class="preview">
+          <div class="row">
+            <span class="chip chip-green soft chip-md">✓ Permohonan Disetujui</span>
+            <span class="chip chip-red soft chip-md">✕ Permohonan Ditolak</span>
+            <span class="chip chip-yellow soft chip-md">⏱ Menunggu Approval</span>
+            <span class="chip chip-blue soft chip-md">ℹ Dalam Review</span>
+            <span class="chip chip-slate soft chip-md">— Dibatalkan</span>
+            <span class="chip chip-green soft chip-md">✓ Data Terverifikasi</span>
+            <span class="chip chip-yellow soft chip-md">⚠ Dokumen Tidak Lengkap</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Kode</h2>
+        <div class="section-divider"></div>
+        <pre class="code">&lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"chip chip-green soft"</span>&gt;Approved&lt;/<span class="k">span</span>&gt;
+&lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"chip chip-red bold"</span>&gt;Rejected&lt;/<span class="k">span</span>&gt;
+&lt;<span class="k">span</span> <span class="k">class</span>=<span class="s">"chip chip-blue outline"</span>&gt;Info&lt;/<span class="k">span</span>&gt;</pre>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+const colors = ['green','yellow','red','slate','blue'];
+const styles = ['bold','soft','outline'];
+document.getElementById('chipGrid').innerHTML = colors.map(c => `<tr><td class="muted" style="font-size:12px">${c}</td>${styles.map(s=>`<td><span class="chip chip-${c} ${s}">✓ Chip</span></td>`).join('')}</tr>`).join('');
+</script>
+</body>
+</html>

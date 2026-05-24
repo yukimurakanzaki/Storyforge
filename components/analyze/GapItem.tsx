@@ -15,17 +15,17 @@ const confidenceBadge = {
   high: {
     label: 'Bukti kuat',
     className: 'bg-red-50 text-red-700 border border-red-200',
-    borderClass: 'border-l-red-500',
+    containerClass: 'border-red-200 bg-red-50/40',
   },
   medium: {
     label: 'Perlu dicek',
-    className: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-    borderClass: 'border-l-yellow-500',
+    className: 'bg-amber-50 text-amber-700 border border-amber-200',
+    containerClass: 'border-amber-200 bg-amber-50/40',
   },
   low: {
     label: 'Dugaan',
     className: 'bg-gray-50 text-gray-600 border border-gray-200',
-    borderClass: 'border-l-gray-400',
+    containerClass: 'border-gray-200 bg-gray-50',
   },
 } as const
 
@@ -147,8 +147,8 @@ const disabledReason = analysisId
   return (
     <li
       className={[
-        'group relative rounded-lg border border-gray-100 border-l-2 bg-gray-50 px-4 py-3',
-        badge.borderClass,
+        'group relative rounded-lg border px-4 py-3',
+        badge.containerClass,
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
@@ -187,7 +187,7 @@ const disabledReason = analysisId
           onClick={() => setIsModalOpen(true)}
           className={[
             'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-gray-500 transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
             canSubmitFeedback && analysisId
               ? 'cursor-pointer border-gray-200 bg-white opacity-100 hover:border-red-200 hover:bg-red-50 hover:text-red-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100'
               : 'cursor-not-allowed border-gray-100 bg-gray-100 text-gray-300',
@@ -198,7 +198,8 @@ const disabledReason = analysisId
       </div>
 
       {isModalOpen && (
-<div
+        <div
+          id={`gap-dialog-${index}`}
           className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/40 px-4"
           onClick={closeModal}
           role="dialog"
@@ -226,7 +227,7 @@ const disabledReason = analysisId
                     value={option.value}
                     checked={feedbackType === option.value}
                     onChange={() => setFeedbackType(option.value)}
-                    className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    className="h-4 w-4 border-gray-300 text-teal-600 focus:ring-teal-500"
                   />
                   {option.label}
                 </label>
@@ -240,7 +241,7 @@ const disabledReason = analysisId
                 onChange={(event) => setNote(event.target.value)}
                 rows={3}
                 placeholder="Kenapa gap ini tidak akurat?"
-                className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-300"
               />
             </label>
 

@@ -225,6 +225,15 @@ export async function POST(request: NextRequest) {
 
   // Run streaming in background — do NOT await before returning Response
   ;(async () => {
+    // Step 1: API key check
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    console.log('[api/analyze] step1: ANTHROPIC_API_KEY present:', !!apiKey, '| length:', apiKey?.length ?? 0)
+    if (!apiKey) {
+      console.error('[api/analyze] FATAL: ANTHROPIC_API_KEY is missing from process.env')
+      streamError('Konfigurasi server error. Hubungi admin.')
+      return
+    }
+
     let accumulated = ''
     try {
       if (modelConfig.provider === 'anthropic') {
@@ -271,6 +280,7 @@ export async function POST(request: NextRequest) {
           enqueue(sseEvent('delta', { text: chunk }))
         }
       }
+      console.log('[api/analyze] step3: stream finished | accumulated length:', accumulated.length)
 
       // Clean and parse accumulated JSON
       const cleaned = accumulated
@@ -309,7 +319,19 @@ export async function POST(request: NextRequest) {
       enqueue(sseEvent('done', parsed))
       close()
     } catch (err) {
-      console.error('[api/analyze] stream error:', err)
+      // Log full error — SDK APIError has non-enumerable fields, so we extract them explicitly
+      const errDetails = err instanceof Error
+        ? {
+            name: err.name,
+            message: err.message,
+            // @ts-expect-error Anthropic SDK APIError fields
+            status: (err as { status?: number }).status,
+            // @ts-expect-error Anthropic SDK APIError fields
+            error: (err as { error?: unknown }).error,
+            stack: err.stack,
+          }
+        : err
+      console.error('[api/analyze] stream error (full):', JSON.stringify(errDetails, null, 2))
       streamError('Terjadi kesalahan. Coba lagi.')
     }
   })()

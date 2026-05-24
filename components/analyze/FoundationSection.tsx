@@ -5,9 +5,9 @@ import { FoundationData, Gap, QAEntry } from '@/types'
 export type { FoundationData }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  high: 'border-red-500/60 bg-red-500/10 text-red-300',
-  medium: 'border-amber-500/60 bg-amber-500/10 text-amber-300',
-  low: 'border-slate-600/60 bg-slate-700/30 text-slate-300',
+  high: 'border-red-200 bg-red-50 text-red-700',
+  medium: 'border-amber-200 bg-amber-50 text-amber-700',
+  low: 'border-gray-200 bg-gray-50 text-gray-600',
 }
 
 type Props = {
@@ -19,10 +19,10 @@ export function FoundationSection({ data }: Props) {
 
   const scoreColor =
     data.readiness_score >= 80
-      ? 'text-teal-400'
+      ? 'text-teal-600'
       : data.readiness_score >= 50
-      ? 'text-amber-400'
-      : 'text-red-400'
+      ? 'text-amber-600'
+      : 'text-red-600'
 
   return (
     <div className="space-y-5">
@@ -30,8 +30,8 @@ export function FoundationSection({ data }: Props) {
       <div className="flex items-center gap-4">
         <div className={`text-4xl font-bold ${scoreColor}`}>{data.readiness_score}</div>
         <div>
-          <div className="text-slate-300 font-medium text-sm">{data.readiness_label}</div>
-          <div className="text-slate-500 text-xs">Readiness Score / 100</div>
+          <div className="text-gray-700 font-medium text-sm">{data.readiness_label}</div>
+          <div className="text-gray-400 text-xs">Readiness Score / 100</div>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export function FoundationSection({ data }: Props) {
       {data.brd_summary && (
         <div>
           <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Ringkasan BRD</div>
-          <p className="text-slate-300 text-sm leading-relaxed">{data.brd_summary}</p>
+          <p className="text-gray-700 text-sm leading-relaxed">{data.brd_summary}</p>
         </div>
       )}
 
@@ -70,7 +70,7 @@ export function FoundationSection({ data }: Props) {
           </div>
           <ul className="space-y-1">
             {data.assumptions.map((a: string, i: number) => (
-              <li key={`assumption-${i}`} className="text-slate-400 text-sm flex gap-2">
+              <li key={`assumption-${i}`} className="text-gray-500 text-sm flex gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" className="text-amber-500 flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 {a}
               </li>
@@ -87,7 +87,7 @@ export function FoundationSection({ data }: Props) {
           </div>
           <ul className="space-y-1">
             {data.out_of_scope.map((item: string, i: number) => (
-              <li key={`oos-${i}`} className="text-slate-500 text-sm flex gap-2">
+              <li key={`oos-${i}`} className="text-gray-500 text-sm flex gap-2">
                 <span className="flex-shrink-0">—</span>
                 {item}
               </li>
@@ -119,10 +119,10 @@ export function FoundationSection({ data }: Props) {
           {qaOpen && (
             <div id="qa-log-content" className="mt-2 space-y-3">
               {data.qa_log.map((entry: QAEntry, i: number) => (
-                <div key={`qa-${entry.round}-${i}`} className="bg-slate-800/50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500 mb-1">Ronde {entry.round}</div>
-                  <div className="text-slate-300 text-sm font-medium mb-1">{entry.question}</div>
-                  <div className="text-slate-400 text-sm">{entry.answer}</div>
+                <div key={`qa-${entry.round}-${i}`} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-1">Ronde {entry.round}</div>
+                  <div className="text-gray-800 text-sm font-medium mb-1">{entry.question}</div>
+                  <div className="text-gray-600 text-sm">{entry.answer}</div>
                 </div>
               ))}
             </div>

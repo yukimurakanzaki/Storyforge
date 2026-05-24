@@ -10,10 +10,10 @@ const STATUS_LABELS: Record<SectionStatus, string> = {
 }
 
 const STATUS_COLORS: Record<SectionStatus, string> = {
-  empty: 'text-slate-500 bg-slate-800',
-  generating: 'text-amber-400 bg-amber-900/30',
-  done: 'text-teal-400 bg-teal-900/30',
-  stale: 'text-orange-400 bg-orange-900/30',
+  empty: 'text-gray-500 bg-gray-100',
+  generating: 'text-amber-700 bg-amber-50',
+  done: 'text-teal-700 bg-teal-50',
+  stale: 'text-orange-700 bg-orange-50',
 }
 
 type Props = {

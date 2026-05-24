@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Contoh Aplikasi · BOSS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  table.data { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--slate-200); border-radius:10px; overflow:hidden; font-size:13px; }
+  table.data thead th { background: var(--primary-800); color:#fff; padding: 12px 14px; text-align:left; font-weight:600; font-size:12px; letter-spacing:.04em; text-transform: uppercase; }
+  table.data tbody td { padding: 12px 14px; border-top: 1px solid var(--slate-100); }
+  table.data tbody tr:hover td { background: var(--primary-50); cursor:pointer; }
+  table.data .num { font-family: var(--font-mono); font-size:12px; color: var(--slate-500); }
+  .panel { background:#fff; border:1px solid var(--slate-200); border-radius:12px; padding: 24px; box-shadow: var(--elevation-1); }
+</style>
+</head>
+<body data-page="sample">
+<div class="app">
+  <aside class="sidebar"></aside>
+  <main class="main">
+    <header class="page-header">
+      <div class="eyebrow">Contoh aplikasi</div>
+      <h1>TAC Approval</h1>
+      <p>Demonstrasi sistem desain BOSS pada layar approval. Coba klik baris untuk simulasi.</p>
+    </header>
+    <div class="content">
+
+      <div class="panel" style="margin-bottom:24px">
+        <h2 style="font-family:var(--font-display); font-size:20px; color:var(--primary-700); margin:0 0 16px">TAC Approval</h2>
+        <div style="display:grid; grid-template-columns: 180px 1fr; row-gap:14px; column-gap:18px; align-items:center">
+          <div style="font-size:13px; color:var(--slate-700)">Nomor Pengajuan</div>
+          <div class="input"><input placeholder="Input Nomor Pengajuan"/></div>
+          <div style="font-size:13px; color:var(--slate-700)">Nama Pengajuan</div>
+          <div class="input"><input placeholder="Input Nama Pengajuan"/></div>
+          <div style="font-size:13px; color:var(--slate-700)">Area</div>
+          <div class="input"><input value="DDS 1" /><span class="icn">⌄</span></div>
+          <div style="font-size:13px; color:var(--slate-700)">Network</div>
+          <div class="input"><input placeholder="Pilih network"/><span class="icn">⌄</span></div>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:18px">
+          <button class="btn btn-secondary">Reset</button>
+          <button class="btn btn-primary">🔍 Search</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; margin-bottom:14px">
+          <div class="row" style="gap:10px">
+            <div class="input" style="max-width:90px"><input value="10" style="text-align:center"/><span class="icn">⌄</span></div>
+            <span class="muted" style="font-size:13px">data per halaman</span>
+          </div>
+          <div class="input" style="max-width:280px"><span class="icn">⌕</span><input placeholder="Input keyword"/></div>
+        </div>
+        <table class="data" id="dataTable">
+          <thead><tr><th style="width:48px">No.</th><th>Nomor Pengajuan</th><th>Nama Pengajuan</th><th>Area</th><th>Network</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="num">010BOS250800004</td><td>SCC Individu Tes Rate Bottom Dealer</td><td>Padang</td><td>Padang</td><td><span class="chip chip-yellow soft">Menunggu</span></td></tr>
+            <tr><td class="num">2</td><td class="num">010BOS250600003</td><td>Skenario Tambah Kolom 100625</td><td>DDS 1</td><td>Area Office Jakarta</td><td><span class="chip chip-green soft">Disetujui</span></td></tr>
+            <tr><td class="num">3</td><td class="num">010BOS250100004</td><td>Pengajuan Bandung 1</td><td>DDS 2</td><td>Bandung 1</td><td><span class="chip chip-blue soft">Review</span></td></tr>
+            <tr><td class="num">4</td><td class="num">010BOS250300748</td><td>Tes Skenario 80</td><td>DDS 2</td><td>Sumedang</td><td><span class="chip chip-red soft">Ditolak</span></td></tr>
+            <tr><td class="num">5</td><td class="num">010BOS250200675</td><td>Skenario Sembilan Puluh Lima</td><td>DDS 1</td><td>Area Office Jakarta</td><td><span class="chip chip-yellow soft">Menunggu</span></td></tr>
+            <tr><td class="num">6</td><td class="num">010BOS250200645</td><td>Skenario Delapan Enam Versi Dua</td><td>DDS 1</td><td>Area Office Jakarta</td><td><span class="chip chip-green soft">Disetujui</span></td></tr>
+          </tbody>
+        </table>
+        <div class="row" style="justify-content:space-between; margin-top:14px; color:var(--slate-500); font-size:12px">
+          <div>Menampilkan 1–6 dari 24</div>
+          <div class="row" style="gap:6px">
+            <button class="btn btn-secondary btn-sm">‹</button>
+            <button class="btn btn-primary btn-sm">1</button>
+            <button class="btn btn-secondary btn-sm">2</button>
+            <button class="btn btn-secondary btn-sm">3</button>
+            <button class="btn btn-secondary btn-sm">›</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="toastBox" style="position:fixed; right:24px; bottom:24px; display:flex; flex-direction:column; gap:8px; z-index:50"></div>
+    </div>
+  </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+document.querySelectorAll('#dataTable tbody tr').forEach(tr => {
+  tr.addEventListener('click', () => {
+    const name = tr.children[2].textContent.trim();
+    const t = document.createElement('div');
+    t.className = 'toast toast-info-soft'; t.style.boxShadow='var(--elevation-2)';
+    t.innerHTML = `<span class="icn">ℹ</span><div><h4>Detail dibuka</h4><p>${name}</p></div><button class="close">✕</button>`;
+    t.querySelector('.close').addEventListener('click', () => t.remove());
+    document.getElementById('toastBox').appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  });
+});
+</script>
+</body>
+</html>

@@ -55,17 +55,19 @@ function AnalyzingState({ streamingText }: { streamingText: string }) {
     <div
       role="status"
       aria-label="Menganalisis BRD"
-      className="flex flex-col items-center justify-center flex-1 gap-4 py-20"
+      className="flex flex-col items-center justify-center flex-1 py-20"
     >
-      <div
-        aria-hidden="true"
-        className="w-10 h-10 rounded-full border-teal-200 border-t-teal-600 animate-spin"
-        style={{ borderWidth: 3, borderStyle: 'solid' }}
-      />
-      <p className="text-sm text-gray-500 font-medium">Menganalisis BRD...</p>
-      <p className="text-xs text-gray-400">Biasanya selesai dalam 15–30 detik</p>
+      <div className="flex flex-col items-center gap-3">
+        <div
+          aria-hidden="true"
+          className="w-10 h-10 rounded-full border-teal-200 border-t-teal-600 animate-spin motion-reduce:animate-none"
+          style={{ borderWidth: 3, borderStyle: 'solid' }}
+        />
+        <p className="text-sm text-gray-600 font-medium">Menganalisis BRD...</p>
+      </div>
+      <p className="mt-6 text-xs text-gray-400">Biasanya selesai dalam 15–30 detik</p>
       {streamingText && (
-        <div className="mt-4 max-w-xl w-full px-4">
+        <div className="mt-8 max-w-xl w-full px-4">
           <pre className="text-xs text-gray-400 whitespace-pre-wrap break-words max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3 border border-gray-100">
             {streamingText}
           </pre>
@@ -118,24 +120,34 @@ export default function AnalyzePage() {
   // Fetch user plan and usage data server-side on page load
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    let lastUserId: string | null | undefined = undefined
+
+    const syncUserAndPlan = async (user: any) => {
+      const userId = user?.id ?? null
+      if (userId === lastUserId) return
+      lastUserId = userId
+
       setIsAuthenticated(!!user)
       if (user) {
         // Fetch plan from subscriptions
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('plan')
-          .eq('user_id', user.id)
-          .single()
-        const plan = (sub?.plan as 'free' | 'pro') ?? 'free'
-        setUserPlan(plan)
-
-        // Free tier: go directly to BRD input (no project selector)
-        if (plan === 'free') {
-          setPhase('input')
-        } else {
-          // Pro tier: show project selector first
-          setPhase('select-project')
+        try {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('plan')
+            .eq('user_id', user.id)
+            .single()
+          const plan = (sub?.plan as 'free' | 'pro') ?? 'free'
+          setUserPlan(plan)
+          // Free tier: go directly to BRD input (no project selector)
+          if (plan === 'free') {
+            setPhase('input')
+          } else {
+            // Pro tier: show project selector first
+            setPhase(prev => (prev === 'input' ? 'select-project' : prev))
+          }
+        } catch (e) {
+          console.error('Error fetching plan:', e)
+          setUserPlan('free')
         }
 
         // Fetch usage data from server
@@ -152,16 +164,19 @@ export default function AnalyzePage() {
         }
       } else {
         // Not authenticated — middleware handles redirect, but as fallback show input
-        setPhase('input')
-      }
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.user)
-      if (!session?.user) {
         setUserPlan(null)
-        setPhase('input')
+        setPhase(prev => (prev === 'select-project' ? 'input' : prev))
       }
+    }
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      syncUserAndPlan(user)
     })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncUserAndPlan(session?.user ?? null)
+    })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -393,7 +408,7 @@ export default function AnalyzePage() {
       })
 
       if (!res.ok) {
-        setMessages(nextMessages.slice(0, -1))
+        setMessages([...nextMessages, { role: 'assistant', content: 'Gagal memproses. Coba lagi.', isStreaming: false }])
         setError('Gagal memproses. Coba lagi.')
         return
       }
@@ -443,13 +458,13 @@ export default function AnalyzePage() {
 
           return
         } else if (event.name === 'error') {
-          setMessages(nextMessages.slice(0, -1))
+          setMessages([...nextMessages, { role: 'assistant', content: 'Gagal memproses. Coba lagi.', isStreaming: false }])
           setError('Gagal memproses. Coba lagi.')
           return
         }
       }
     } catch (e) {
-      setMessages(nextMessages.slice(0, -1))
+      setMessages([...nextMessages, { role: 'assistant', content: 'Gagal memproses. Coba lagi.', isStreaming: false }])
       setError(e instanceof Error ? e.message : 'Gagal memproses. Coba lagi.')
     } finally {
       setIsRefining(false)
@@ -679,7 +694,7 @@ export default function AnalyzePage() {
       />
 
       <div id="main-content" className="flex flex-col flex-1 min-w-0 h-screen">
-        <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">
+        <header className="flex-shrink-0 border-b border-gray-100 bg-white px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors">
               StoryForge<span className="text-teal-500">.id</span>
@@ -803,8 +818,8 @@ export default function AnalyzePage() {
                       ← {selectedProject?.name ?? 'Pilih project'}
                     </button>
                   )}
-                  <h1 className="text-2xl font-extrabold text-gray-900">Analisis BRD</h1>
-                  <p className="mt-1.5 text-sm text-gray-500">
+                  <h1 className="text-3xl font-bold tracking-tight text-gray-900">Analisis BRD</h1>
+                  <p className="mt-3 text-sm text-gray-500 max-w-xl">
                     Paste BRD kamu dan dapatkan gap analysis, readiness score, serta pertanyaan klarifikasi dalam hitungan detik.
                   </p>
                 </div>
@@ -827,7 +842,7 @@ export default function AnalyzePage() {
           ) : (
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
               {foundationData && (phase === 'refining' || phase === 'finalizing' || phase === 'done') && (
-                <div className="flex-shrink-0 border-b border-gray-100 px-6 py-4 bg-gray-50">
+                <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4 bg-gray-50">
                   <LivingDocument
                     foundationData={foundationData}
                     sectionStates={sectionStates}
