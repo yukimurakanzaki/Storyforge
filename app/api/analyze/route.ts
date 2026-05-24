@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
+import { google } from '@ai-sdk/google'
+import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
-import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
 import { sseEvent, createSSEStream } from '@/lib/sse'
+import { getModelConfig } from '@/lib/model-selector'
 import type { ProjectContext } from '@/types'
 
 export const runtime = 'nodejs'
@@ -41,11 +43,10 @@ export function validateAnalyzePayload(body: unknown): AnalyzeValidationResult {
 
 function jsonResponse(
   body: unknown,
-  init: ResponseInit & { mode: 'guest' | 'user' }
+  init: ResponseInit
 ) {
   const headers = new Headers(init.headers)
   headers.set('Cache-Control', 'no-store')
-  headers.set('X-Mode', init.mode)
 
   return NextResponse.json(body, {
     ...init,
@@ -123,8 +124,6 @@ export function buildSystemPromptWithContext(projectContext?: {
 }
 
 export async function POST(request: NextRequest) {
-  const mode = request.headers.get('x-guest-mode') === '1' ? 'guest' : 'user'
-
   // Hoist to function scope so they're accessible in the background IIFE
   let supabase: Awaited<ReturnType<typeof createClient>> | undefined
   let user: { id: string } | null = null
@@ -133,41 +132,29 @@ export async function POST(request: NextRequest) {
   let startTime: number | undefined
   let projectContext: { name: string; context: ProjectContext } | undefined
 
-  if (mode === 'guest') {
-    // Server-side rate limit for unauthenticated (guest) requests
-    const ip = getClientIp(request)
-    const { allowed } = checkGuestRateLimit(ip)
-    if (!allowed) {
-      return jsonResponse(
-        { error: 'Rate limit exceeded', message: 'Batas analisis tercapai. Masuk untuk melanjutkan.', mode },
-        { status: 429, mode }
-      )
-    }
-  } else {
-    // Require a valid authenticated session for non-guest requests
-    supabase = await createClient()
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      return jsonResponse(
-        { error: 'Unauthorized', message: 'Login diperlukan.', mode },
-        { status: 401, mode }
-      )
-    }
-    user = authUser
+  // Require a valid authenticated session
+  supabase = await createClient()
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  if (!authUser) {
+    return jsonResponse(
+      { error: 'Unauthorized', message: 'Login diperlukan.' },
+      { status: 401 }
+    )
+  }
+  user = authUser
 
-    // Generate a session ID for event logging
-    sessionId = crypto.randomUUID()
+  // Generate a session ID for event logging
+  sessionId = crypto.randomUUID()
 
-    // Check usage limit before proceeding
-    const usageResult = await checkUsage(supabase, user.id)
-    if (!usageResult.allowed) {
-      const headers = new Headers()
-      headers.set('X-Limit-Reached', 'true')
-      return jsonResponse(
-        { error: 'Limit reached', count: usageResult.count, limit: usageResult.limit, plan: usageResult.plan, mode },
-        { status: 429, mode, headers }
-      )
-    }
+  // Check usage limit before proceeding
+  const usageResult = await checkUsage(supabase, user.id)
+  if (!usageResult.allowed) {
+    const headers = new Headers()
+    headers.set('X-Limit-Reached', 'true')
+    return jsonResponse(
+      { error: 'Limit reached', count: usageResult.count, limit: usageResult.limit, plan: usageResult.plan },
+      { status: 429, headers }
+    )
   }
 
   let body: unknown
@@ -175,8 +162,8 @@ export async function POST(request: NextRequest) {
     body = await request.json()
   } catch {
     return jsonResponse(
-      { error: 'Invalid JSON', message: 'Request body tidak valid.', mode },
-      { status: 400, mode }
+      { error: 'Invalid JSON', message: 'Request body tidak valid.' },
+      { status: 400 }
     )
   }
 
@@ -186,9 +173,8 @@ export async function POST(request: NextRequest) {
       {
         error: validation.error,
         message: validation.error,
-        mode,
       },
-      { status: validation.status, mode }
+      { status: validation.status }
     )
   }
 
@@ -226,13 +212,15 @@ export async function POST(request: NextRequest) {
     startTime = Date.now()
   }
 
+  // Determine AI model based on user's plan
+  const modelConfig = getModelConfig(usageResult.plan)
+
   // --- Start SSE stream ---
   const { readable, enqueue, close, error: streamError } = createSSEStream()
 
   const responseHeaders = new Headers({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'X-Mode': mode,
   })
 
   // Run streaming in background — do NOT await before returning Response
@@ -248,32 +236,51 @@ export async function POST(request: NextRequest) {
 
     let accumulated = ''
     try {
-      console.log('[api/analyze] step2: starting Anthropic stream | model: claude-haiku-4-5-20251001 | textLen:', validation.text.length)
-      const stream = anthropic.messages.stream({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        temperature: 0,
-        system: buildSystemPromptWithContext(projectContext),
-        messages: [
-          {
-            role: 'user',
-            content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
-          },
-        ],
-      })
+      if (modelConfig.provider === 'anthropic') {
+        // Pro tier: use Anthropic SDK directly with ZDR headers
+        const stream = anthropic.messages.stream({
+          model: modelConfig.model,
+          max_tokens: 4096,
+          temperature: 0,
+          system: buildSystemPromptWithContext(projectContext),
+          messages: [
+            {
+              role: 'user',
+              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
+            },
+          ],
+        })
 
-      let deltaCount = 0
-      for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          accumulated += event.delta.text
-          deltaCount++
-          enqueue(sseEvent('delta', { text: event.delta.text }))
+        for await (const event of stream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            accumulated += event.delta.text
+            enqueue(sseEvent('delta', { text: event.delta.text }))
+          }
+        }
+      } else {
+        // Free tier: use Google Gemini via Vercel AI SDK
+        const result = streamText({
+          model: google(modelConfig.model),
+          system: buildSystemPromptWithContext(projectContext),
+          messages: [
+            {
+              role: 'user',
+              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
+            },
+          ],
+          maxOutputTokens: 4096,
+          temperature: 0,
+        })
+
+        for await (const chunk of result.textStream) {
+          accumulated += chunk
+          enqueue(sseEvent('delta', { text: chunk }))
         }
       }
-      console.log('[api/analyze] step3: stream finished | deltas received:', deltaCount, '| accumulated length:', accumulated.length)
+      console.log('[api/analyze] step3: stream finished | accumulated length:', accumulated.length)
 
       // Clean and parse accumulated JSON
       const cleaned = accumulated
@@ -282,7 +289,7 @@ export async function POST(request: NextRequest) {
         .trim()
 
       if (!cleaned) {
-        console.error('[api/analyze] empty response from Anthropic')
+        console.error('[api/analyze] empty response from AI provider')
         streamError('AI returned empty response. Coba lagi.')
         return
       }

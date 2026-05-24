@@ -5,6 +5,7 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { GapItem } from './GapItem'
 import { QACards } from './QACards'
 import { RequirementsPanel } from './RequirementsPanel'
+import { Watermark } from './Watermark'
 import type { AnalysisResult, ChatMessage, Phase, QAAnswer, RequirementsResult } from '@/types'
 
 const MAX_CHARS = 5000
@@ -19,6 +20,7 @@ interface RefinementChatProps {
   isRefining: boolean
   isFinalizing: boolean
   phase: Phase
+  plan?: 'free' | 'pro' | null
   onSend: (text: string) => void
   onReanalyze: () => void
   onSubmitQA: () => void
@@ -55,6 +57,7 @@ interface MobilePanelProps {
   qaAnswers: RefinementChatProps['qaAnswers']
   resolvedIndices: RefinementChatProps['resolvedIndices']
   isRefining: boolean
+  plan?: 'free' | 'pro' | null
   onQAAnswerChange: RefinementChatProps['onQAAnswerChange']
   onQAOutOfScopeChange: RefinementChatProps['onQAOutOfScopeChange']
   onSubmitQA: RefinementChatProps['onSubmitQA']
@@ -68,6 +71,7 @@ function MobileAnalysisPanel({
   qaAnswers,
   resolvedIndices,
   isRefining,
+  plan,
   onQAAnswerChange,
   onQAOutOfScopeChange,
   onSubmitQA,
@@ -140,6 +144,7 @@ function MobileAnalysisPanel({
                     />
                   ))}
                 </ul>
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
 
@@ -160,6 +165,7 @@ function MobileAnalysisPanel({
                   onOutOfScopeChange={onQAOutOfScopeChange}
                   onSubmit={onSubmitQA}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
           </div>
@@ -178,6 +184,7 @@ export function RefinementChat({
   isRefining,
   isFinalizing,
   phase,
+  plan,
   onSend,
   onReanalyze,
   onSubmitQA,
@@ -329,6 +336,7 @@ export function RefinementChat({
                   onRetry={onRequirementsRetry}
                   onRegenerate={onRequirementsRegenerate}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
 
@@ -385,7 +393,7 @@ export function RefinementChat({
       </div>
 
       {/* Mobile: floating readiness badge + bottom sheet */}
-      <MobileAnalysisPanel result={result} readinessStyle={readinessStyle} qaVersion={qaVersion} hasUnanswered={hasUnanswered} qaAnswers={qaAnswers} resolvedIndices={resolvedIndices} isRefining={isRefining} onQAAnswerChange={onQAAnswerChange} onQAOutOfScopeChange={onQAOutOfScopeChange} onSubmitQA={onSubmitQA} />
+      <MobileAnalysisPanel result={result} readinessStyle={readinessStyle} qaVersion={qaVersion} hasUnanswered={hasUnanswered} qaAnswers={qaAnswers} resolvedIndices={resolvedIndices} isRefining={isRefining} plan={plan} onQAAnswerChange={onQAAnswerChange} onQAOutOfScopeChange={onQAOutOfScopeChange} onSubmitQA={onSubmitQA} />
 
       {/* ── Right: Analysis panel ────────────────────────── */}
       {result && (
@@ -415,6 +423,7 @@ export function RefinementChat({
                     />
                   ))}
                 </ul>
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
 
@@ -435,6 +444,7 @@ export function RefinementChat({
                   onOutOfScopeChange={onQAOutOfScopeChange}
                   onSubmit={onSubmitQA}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
           </div>

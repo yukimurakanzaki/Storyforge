@@ -13,7 +13,6 @@ import { NextRequest } from 'next/server'
  * Observation-first methodology:
  * - Mock @anthropic-ai/sdk to return canned responses (no real API calls)
  * - Mock @/lib/supabase/server to simulate auth states
- * - Mock @/lib/guest-rate-limit to simulate rate limiting
  * - Assert response status codes and body structure for valid/invalid inputs
  */
 
@@ -163,6 +162,16 @@ vi.mock('@anthropic-ai/sdk', () => {
   }
 })
 
+// Mock Google AI SDK and Vercel AI SDK (used for free tier, not exercised in these tests)
+vi.mock('@ai-sdk/google', () => ({
+  google: vi.fn(() => 'mock-google-model'),
+}))
+
+vi.mock('ai', () => ({
+  streamText: vi.fn(),
+  generateText: vi.fn(),
+}))
+
 // Mock Supabase server client
 const mockGetUser = vi.fn()
 
@@ -181,7 +190,7 @@ function makeQueryBuilder(data: unknown = null) {
 
 const mockFrom = vi.fn((table: string) => {
   if (table === 'subscriptions') {
-    return makeQueryBuilder(null) // no subscription → free plan
+    return makeQueryBuilder({ plan: 'pro' }) // pro plan → uses Anthropic (mocked above)
   }
   if (table === 'usage_counters') {
     return makeQueryBuilder({ count: 0, reset_at: null, first_analysis_at: null }) // under limit
@@ -199,14 +208,6 @@ vi.mock('@/lib/supabase/server', () => ({
     },
     from: mockFrom,
   })),
-}))
-
-// Mock guest rate limit
-const mockCheckGuestRateLimit = vi.fn()
-const mockGetClientIp = vi.fn()
-vi.mock('@/lib/guest-rate-limit', () => ({
-  checkGuestRateLimit: (...args: unknown[]) => mockCheckGuestRateLimit(...args),
-  getClientIp: (...args: unknown[]) => mockGetClientIp(...args),
 }))
 
 // Helper to create NextRequest
@@ -233,13 +234,11 @@ function createRequest(
 describe('Property 2: Preservation — /api/analyze route behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetClientIp.mockReturnValue('127.0.0.1')
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: true, remaining: 9 })
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
     mockStream.mockImplementation(() => makeStreamFromText(CANNED_ANALYZE_RESPONSE))
-    // Reset from mock to return default (under-limit) data
+    // Reset from mock to return pro plan (uses Anthropic path which is mocked)
     mockFrom.mockImplementation((table: string) => {
-      if (table === 'subscriptions') return makeQueryBuilder(null)
+      if (table === 'subscriptions') return makeQueryBuilder({ plan: 'pro' })
       if (table === 'usage_counters') return makeQueryBuilder({ count: 0, reset_at: null, first_analysis_at: null })
       return makeQueryBuilder(null)
     })
@@ -272,31 +271,10 @@ describe('Property 2: Preservation — /api/analyze route behavior', () => {
   })
 
   /**
-   * Validates: Requirement 3.1
-   * Observation: /api/analyze returns structured JSON for guest mode
-   */
-  it('returns structured JSON for valid guest-mode input', async () => {
-    const { POST } = await import('@/app/api/analyze/route')
-
-    const request = createRequest('/api/analyze', {
-      body: { text: 'BRD dokumen untuk fitur payment' },
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream')
-
-    const data = await readSSEDoneData(response)
-    expect(data).toHaveProperty('gapList')
-    expect(data).toHaveProperty('readinessScore')
-  })
-
-  /**
    * Validates: Requirement 3.4
-   * Observation: unauthenticated requests (no guest-mode, no session) return 401
+   * Observation: unauthenticated requests return 401
    */
-  it('returns 401 for unauthenticated request without guest-mode', async () => {
+  it('returns 401 for unauthenticated request', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const { POST } = await import('@/app/api/analyze/route')
 
@@ -310,26 +288,6 @@ describe('Property 2: Preservation — /api/analyze route behavior', () => {
 
     expect(response.status).toBe(401)
     expect(data).toHaveProperty('error', 'Unauthorized')
-  })
-
-  /**
-   * Validates: Requirement 3.5
-   * Observation: rate-limited guest requests return 429
-   */
-  it('returns 429 for rate-limited guest request', async () => {
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: false, remaining: 0 })
-    const { POST } = await import('@/app/api/analyze/route')
-
-    const request = createRequest('/api/analyze', {
-      body: { text: 'Some BRD text' },
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(429)
-    expect(data).toHaveProperty('error', 'Rate limit exceeded')
   })
 
   /**
@@ -372,10 +330,14 @@ describe('Property 2: Preservation — /api/analyze route behavior', () => {
 describe('Property 2: Preservation — /api/refine route behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetClientIp.mockReturnValue('127.0.0.1')
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: true, remaining: 9 })
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
     mockStream.mockImplementation(() => makeStreamFromText(CANNED_REFINE_RESPONSE))
+    // Reset from mock to return pro plan (uses Anthropic path which is mocked)
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'subscriptions') return makeQueryBuilder({ plan: 'pro' })
+      if (table === 'usage_counters') return makeQueryBuilder({ count: 0, reset_at: null, first_analysis_at: null })
+      return makeQueryBuilder(null)
+    })
   })
 
   const validRefineBody = {
@@ -419,31 +381,10 @@ describe('Property 2: Preservation — /api/refine route behavior', () => {
   })
 
   /**
-   * Validates: Requirement 3.2
-   * Observation: /api/refine works in guest mode
-   */
-  it('returns valid response for guest-mode request', async () => {
-    const { POST } = await import('@/app/api/refine/route')
-
-    const request = createRequest('/api/refine', {
-      body: validRefineBody,
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream')
-
-    const data = await readSSEDoneData(response) as Record<string, unknown>
-    expect(data).toHaveProperty('message')
-    expect(data).toHaveProperty('readyToFinalize')
-  })
-
-  /**
    * Validates: Requirement 3.4
    * Observation: unauthenticated requests return 401
    */
-  it('returns 401 for unauthenticated request without guest-mode', async () => {
+  it('returns 401 for unauthenticated request', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const { POST } = await import('@/app/api/refine/route')
 
@@ -457,26 +398,6 @@ describe('Property 2: Preservation — /api/refine route behavior', () => {
 
     expect(response.status).toBe(401)
     expect(data).toHaveProperty('error', 'Unauthorized')
-  })
-
-  /**
-   * Validates: Requirement 3.5
-   * Observation: rate-limited guest requests return 429
-   */
-  it('returns 429 for rate-limited guest request', async () => {
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: false, remaining: 0 })
-    const { POST } = await import('@/app/api/refine/route')
-
-    const request = createRequest('/api/refine', {
-      body: validRefineBody,
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(429)
-    expect(data).toHaveProperty('error', 'Rate limit exceeded')
   })
 
   /**
@@ -519,12 +440,16 @@ describe('Property 2: Preservation — /api/refine route behavior', () => {
 describe('Property 2: Preservation — /api/requirements route behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetClientIp.mockReturnValue('127.0.0.1')
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: true, remaining: 9 })
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } })
     // /api/requirements still uses messages.create (not yet converted to SSE)
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: CANNED_REQUIREMENTS_RESPONSE }],
+    })
+    // Reset from mock to return pro plan (uses Anthropic path which is mocked)
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'subscriptions') return makeQueryBuilder({ plan: 'pro' })
+      if (table === 'usage_counters') return makeQueryBuilder({ count: 0, reset_at: null, first_analysis_at: null })
+      return makeQueryBuilder(null)
     })
   })
 
@@ -574,29 +499,10 @@ describe('Property 2: Preservation — /api/requirements route behavior', () => 
   })
 
   /**
-   * Validates: Requirement 3.3
-   * Observation: /api/requirements works in guest mode
-   */
-  it('returns userStories JSON for valid guest-mode input', async () => {
-    const { POST } = await import('@/app/api/requirements/route')
-
-    const request = createRequest('/api/requirements', {
-      body: validRequirementsBody,
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data).toHaveProperty('userStories')
-  })
-
-  /**
    * Validates: Requirement 3.4
    * Observation: unauthenticated requests return 401
    */
-  it('returns 401 for unauthenticated request without guest-mode', async () => {
+  it('returns 401 for unauthenticated request', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const { POST } = await import('@/app/api/requirements/route')
 
@@ -610,26 +516,6 @@ describe('Property 2: Preservation — /api/requirements route behavior', () => 
 
     expect(response.status).toBe(401)
     expect(data).toHaveProperty('error', 'Unauthorized')
-  })
-
-  /**
-   * Validates: Requirement 3.5
-   * Observation: rate-limited guest requests return 429
-   */
-  it('returns 429 for rate-limited guest request', async () => {
-    mockCheckGuestRateLimit.mockReturnValue({ allowed: false, remaining: 0 })
-    const { POST } = await import('@/app/api/requirements/route')
-
-    const request = createRequest('/api/requirements', {
-      body: validRequirementsBody,
-      headers: { 'content-type': 'application/json', 'x-guest-mode': '1' },
-    })
-
-    const response = await POST(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(429)
-    expect(data).toHaveProperty('error', 'Rate limit exceeded')
   })
 
   /**
@@ -688,10 +574,6 @@ describe('Property 2: Preservation — /api/requirements route behavior', () => 
         auth: { getUser: mockGetUser },
         from: mockFrom,
       })),
-    }))
-    vi.doMock('@/lib/guest-rate-limit', () => ({
-      checkGuestRateLimit: (...args: unknown[]) => mockCheckGuestRateLimit(...args),
-      getClientIp: (...args: unknown[]) => mockGetClientIp(...args),
     }))
     // Unmock @/lib/anthropic so the real module runs and calls the SDK constructor
     vi.doUnmock('@/lib/anthropic')

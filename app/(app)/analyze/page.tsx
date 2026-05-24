@@ -18,20 +18,10 @@ import Link from 'next/link'
 import { SessionSidebar } from '@/components/analyze/SessionSidebar'
 import { ProjectSelector } from '@/components/analyze/ProjectSelector'
 import { LivingDocument } from '@/components/analyze/LivingDocument'
-import {
-  initTempSession,
-  saveTempSession,
-  incrementRefinementRound,
-  getTempSession,
-  persistAnalysisState,
-} from '@/lib/session/temp-session'
-import { useMigrateTempSession } from '@/lib/session/use-migrate-temp-session'
+import { UsageCounter } from '@/components/analyze/UsageCounter'
+import { UpgradeCTA } from '@/components/analyze/UpgradeCTA'
+import { TierBadge } from '@/components/ui/TierBadge'
 import { createClient } from '@/lib/supabase/client'
-import {
-  canGuestAnalyze,
-  incrementGuestUsage,
-  readGuestUsage,
-} from '@/lib/guest-usage'
 import { readSSEStream } from '@/lib/sse-client'
 
 interface RefineAPIResponse {
@@ -104,7 +94,7 @@ function buildQASubmissionMessage(
 
 export default function AnalyzePage() {
   const [brdText, setBrdText] = useState('')
-  const [phase, setPhase] = useState<AppPhase>('select-project')
+  const [phase, setPhase] = useState<AppPhase>('input')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
   const [streamingText, setStreamingText] = useState('')
@@ -116,20 +106,18 @@ export default function AnalyzePage() {
   const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | null>(null)
-  const [showPaywallCTA, setShowPaywallCTA] = useState(false)
-  const [guestUsage, setGuestUsage] = useState<{ count: number; limit: number }>({
-    count: 0,
-    limit: 5,
-  })
   const [qaAnswers, setQaAnswers] = useState<QAAnswer[]>([])
   const [resolvedIndices, setResolvedIndices] = useState<number[]>([])
   const [foundationData, setFoundationData] = useState<FoundationData | null>(null)
   const [sectionStates, setSectionStates] = useState<SectionStates>(DEFAULT_SECTION_STATES)
   const [sessionState, setSessionState] = useState<SessionState>('refining')
+  const [usageData, setUsageData] = useState<{ used: number; limit: number } | null>(null)
+  const [usageError, setUsageError] = useState(false)
+  const [showUpgradeCTA, setShowUpgradeCTA] = useState(false)
+  const [companyContextError, setCompanyContextError] = useState<string | null>(null)
   const isFinalizingRef = useRef(false)
 
-  useMigrateTempSession(isAuthenticated)
-
+  // Fetch user plan and usage data server-side on page load
   useEffect(() => {
     const supabase = createClient()
     let lastUserId: string | null | undefined = undefined
@@ -141,6 +129,7 @@ export default function AnalyzePage() {
 
       setIsAuthenticated(!!user)
       if (user) {
+        // Fetch plan from subscriptions
         try {
           const { data: sub } = await supabase
             .from('subscriptions')
@@ -149,18 +138,32 @@ export default function AnalyzePage() {
             .single()
           const plan = (sub?.plan as 'free' | 'pro') ?? 'free'
           setUserPlan(plan)
+          // Free tier: go directly to BRD input (no project selector)
           if (plan === 'free') {
             setPhase('input')
           } else {
+            // Pro tier: show project selector first
             setPhase(prev => (prev === 'input' ? 'select-project' : prev))
           }
         } catch (e) {
           console.error('Error fetching plan:', e)
           setUserPlan('free')
-          setPhase('input')
+        }
+
+        // Fetch usage data from server
+        try {
+          const usageRes = await fetch('/api/usage')
+          if (usageRes.ok) {
+            const data = await usageRes.json()
+            setUsageData({ used: data.used, limit: data.limit })
+          } else {
+            setUsageError(true)
+          }
+        } catch {
+          setUsageError(true)
         }
       } else {
-        setGuestUsage(readGuestUsage())
+        // Not authenticated — middleware handles redirect, but as fallback show input
         setUserPlan(null)
         setPhase(prev => (prev === 'select-project' ? 'input' : prev))
       }
@@ -188,13 +191,6 @@ export default function AnalyzePage() {
   }, [phase])
 
   useEffect(() => {
-    const session = initTempSession()
-    if (session.refinementRounds >= 3 || session.hasGenerated) {
-      setShowAccountPrompt(true)
-    }
-  }, [])
-
-  useEffect(() => {
     if (!result) return
     setQaAnswers((prev) => {
       const next = [...prev]
@@ -205,18 +201,55 @@ export default function AnalyzePage() {
     })
   }, [result])
 
-  function handleProjectSelect(project: Project) {
-    if (isAuthenticated && (!userPlan || userPlan === 'free')) {
-      setShowPaywallCTA(true)
+  async function handleProjectSelectWithContextLoad(project: Project) {
+    setSelectedProject(project)
+    setCompanyContextError(null)
+
+    // Pro tier: verify Company Context is available on project selection
+    // The project object already contains context from the ProjectSelector fetch.
+    // If context is missing/empty, we attempt a fresh fetch to confirm.
+    const hasContext = project.context &&
+      project.context.business &&
+      (project.context.business.domain || project.context.business.description)
+
+    if (hasContext) {
+      // Company Context loaded successfully — proceed to BRD input
+      setPhase('input')
       return
     }
-    setSelectedProject(project)
-    setPhase('input')
+
+    // Attempt to reload project data to verify context availability
+    try {
+      const res = await fetch('/api/projects')
+      if (!res.ok) {
+        setCompanyContextError('Gagal memuat Company Context. Coba lagi.')
+        return
+      }
+      const { projects } = await res.json()
+      const freshProject = (projects as Project[]).find(p => p.id === project.id)
+      if (freshProject) {
+        setSelectedProject(freshProject)
+      }
+      // Proceed to input even if context is empty — the project was selected
+      setPhase('input')
+    } catch {
+      setCompanyContextError('Gagal memuat Company Context. Coba lagi.')
+    }
+  }
+
+  function handleRetryCompanyContext() {
+    if (selectedProject) {
+      handleProjectSelectWithContextLoad(selectedProject)
+    }
   }
 
   function handleNewSession() {
     setBrdText('')
-    setPhase(isAuthenticated ? 'select-project' : 'input')
+    if (userPlan === 'pro') {
+      setPhase('select-project')
+    } else {
+      setPhase('input')
+    }
     setSelectedProject(null)
     setResult(undefined)
     setMessages([])
@@ -228,20 +261,11 @@ export default function AnalyzePage() {
     setFoundationData(null)
     setSectionStates(DEFAULT_SECTION_STATES)
     setSessionState('refining')
+    setCompanyContextError(null)
     isFinalizingRef.current = false
   }
 
   async function handleAnalyze(text: string) {
-    if (!isAuthenticated) {
-      const usageCheck = canGuestAnalyze()
-      setGuestUsage({ count: usageCheck.count, limit: usageCheck.limit })
-      if (!usageCheck.allowed) {
-        setError('Batas analisis gratis tercapai. Masuk untuk menyimpan riwayat dan melanjutkan analisis.')
-        setShowAccountPrompt(true)
-        return
-      }
-    }
-
     setPhase('analyzing')
     setStreamingText('')
     setResult(undefined)
@@ -258,7 +282,6 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
         },
         body: JSON.stringify({ text, projectId: selectedProject?.id ?? null }),
       })
@@ -339,9 +362,12 @@ export default function AnalyzePage() {
           setBrdText(text)
           setResult(storedAnalysisResult)
           setMessages([firstMsg])
-          persistAnalysisState(text, [firstMsg], storedAnalysisResult)
-          if (!isAuthenticated) setGuestUsage(incrementGuestUsage())
           setPhase('refining')
+
+          // Refresh usage data after successful analysis
+          if (usageData) {
+            setUsageData({ used: usageData.used + 1, limit: usageData.limit })
+          }
           return
         } else if (event.name === 'error') {
           const { error: msg } = event.data as { error: string }
@@ -364,7 +390,6 @@ export default function AnalyzePage() {
     setIsRefining(true)
     setError(undefined)
 
-    // Add streaming placeholder before the fetch so the user sees the typing indicator immediately
     const streamingPlaceholder: ChatMessage = { role: 'assistant', content: '', isStreaming: true }
     setMessages([...nextMessages, streamingPlaceholder])
 
@@ -373,7 +398,6 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
         },
         body: JSON.stringify({
           brdText: currentBrdText,
@@ -412,7 +436,6 @@ export default function AnalyzePage() {
             }
             setResult(updatedResult)
 
-            // Update foundation data from refine response
             if (foundationData) {
               const updatedFoundation: FoundationData = {
                 ...foundationData,
@@ -431,16 +454,8 @@ export default function AnalyzePage() {
 
             setQaAnswers([])
             setResolvedIndices([])
-            persistAnalysisState(currentBrdText, finalMessages, updatedResult)
-          } else {
-            persistAnalysisState(currentBrdText, finalMessages, currentResult)
           }
 
-          incrementRefinementRound()
-          const updated = getTempSession()
-          if (updated && (updated.refinementRounds >= 3 || updated.hasGenerated)) {
-            setShowAccountPrompt(true)
-          }
           return
         } else if (event.name === 'error') {
           setMessages([...nextMessages, { role: 'assistant', content: 'Gagal memproses. Coba lagi.', isStreaming: false }])
@@ -553,7 +568,6 @@ export default function AnalyzePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(!isAuthenticated ? { 'x-guest-mode': '1' } : {}),
         },
         body: JSON.stringify({
           brdText,
@@ -572,10 +586,6 @@ export default function AnalyzePage() {
       const parsed: RequirementsResult = await res.json()
       setRequirements(parsed)
       setPhase('done')
-      const currentSession = getTempSession()
-      if (currentSession) {
-        saveTempSession({ ...currentSession, hasGenerated: true, requirements: parsed })
-      }
       setShowAccountPrompt(true)
 
       if (isAuthenticated) {
@@ -605,11 +615,24 @@ export default function AnalyzePage() {
     navigator.clipboard.writeText(content)
   }, [])
 
+  const handleUsageCounterClick = useCallback(() => {
+    if (userPlan === 'free') {
+      setShowUpgradeCTA(true)
+    }
+  }, [userPlan])
+
   const isPostAnalysis = phase === 'refining' || phase === 'finalizing' || phase === 'done'
+
+  // Usage limit handling for free-tier users
+  const isFreeTier = userPlan === 'free'
+  const usageLimitReached = isFreeTier && usageData !== null && usageData.used >= usageData.limit
+  const usageSoftLimit = isFreeTier && usageData !== null && usageData.used > usageData.limit && usageData.used <= usageData.limit * 2
+  const usageHardBlock = isFreeTier && usageData !== null && usageData.used > usageData.limit * 2
 
   // ---- Render ----
 
-  if (phase === 'select-project') {
+  // Pro tier: project selector phase
+  if (phase === 'select-project' && userPlan === 'pro') {
     return (
       <div className="flex h-screen overflow-hidden bg-white">
         <SessionSidebar
@@ -617,49 +640,45 @@ export default function AnalyzePage() {
           onNewSession={handleNewSession}
         />
         <div id="main-content" className="flex flex-col flex-1 min-w-0 h-screen overflow-y-auto">
-          <header className="flex-shrink-0 border-b border-gray-100 bg-white px-6 py-3 flex items-center justify-between">
-            <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors text-sm">
-              StoryForge<span className="text-teal-500">.id</span>
-            </Link>
+          <header className="flex-shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors text-sm">
+                StoryForge<span className="text-teal-500">.id</span>
+              </Link>
+              {userPlan && <TierBadge plan={userPlan} />}
+            </div>
             <div className="flex items-center gap-3">
-              {!isAuthenticated && (
-                <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-2.5 py-1 border border-gray-200">
-                  Guest {guestUsage.count}/{guestUsage.limit}
-                </span>
+              {usageData && userPlan && (
+                <UsageCounter
+                  used={usageData.used}
+                  limit={usageData.limit}
+                  plan={userPlan}
+                  onClick={handleUsageCounterClick}
+                  error={usageError}
+                />
               )}
-              {isAuthenticated ? (
-                <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Dashboard</Link>
-              ) : (
-                <Link href="/login" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Masuk</Link>
+              {usageError && !usageData && (
+                <UsageCounter used={0} limit={0} plan={userPlan ?? 'free'} error={true} />
               )}
+              <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">Dashboard</Link>
             </div>
           </header>
           <div className="max-w-2xl mx-auto px-6 py-10 w-full">
-            {showPaywallCTA ? (
-              <div className="rounded-xl border border-teal-200 bg-teal-50 p-6 flex flex-col gap-4">
+            {companyContextError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex flex-col gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-teal-800">Fitur Pro: Company Context</h2>
-                  <p className="mt-2 text-sm text-teal-700">
-                    Company Context membantu AI menganalisis BRD sesuai konteks bisnis dan teknis proyekmu. Upgrade ke Pro untuk menggunakan fitur ini.
-                  </p>
+                  <h2 className="text-lg font-bold text-red-800">Gagal Memuat Company Context</h2>
+                  <p className="mt-2 text-sm text-red-700">{companyContextError}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
-                  >
-                    Upgrade ke Pro
-                  </Link>
-                  <button
-                    onClick={() => setShowPaywallCTA(false)}
-                    className="text-sm text-teal-600 hover:text-teal-800 transition-colors"
-                  >
-                    Kembali ke daftar project
-                  </button>
-                </div>
+                <button
+                  onClick={handleRetryCompanyContext}
+                  className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors self-start"
+                >
+                  Coba Lagi
+                </button>
               </div>
             ) : (
-              <ProjectSelector onSelect={handleProjectSelect} />
+              <ProjectSelector onSelect={handleProjectSelectWithContextLoad} />
             )}
           </div>
         </div>
@@ -680,7 +699,8 @@ export default function AnalyzePage() {
             <Link href="/" className="font-bold text-gray-900 hover:text-teal-600 transition-colors">
               StoryForge<span className="text-teal-500">.id</span>
             </Link>
-            {selectedProject && (
+            {userPlan && <TierBadge plan={userPlan} />}
+            {selectedProject && userPlan === 'pro' && (
               <>
                 <span className="text-gray-300 select-none">/</span>
                 <button
@@ -702,10 +722,18 @@ export default function AnalyzePage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {!isAuthenticated && (
-              <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-2.5 py-1 border border-gray-200">
-                Guest {guestUsage.count}/{guestUsage.limit}
-              </span>
+            {/* UsageCounter in page header */}
+            {usageData && userPlan && (
+              <UsageCounter
+                used={usageData.used}
+                limit={usageData.limit}
+                plan={userPlan}
+                onClick={handleUsageCounterClick}
+                error={usageError}
+              />
+            )}
+            {usageError && !usageData && (
+              <UsageCounter used={0} limit={0} plan={userPlan ?? 'free'} error={true} />
             )}
             {isAuthenticated ? (
               <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
@@ -746,18 +774,49 @@ export default function AnalyzePage() {
           </div>
         )}
 
+        {/* Upgrade CTA: triggered by UsageCounter click or usage limit reached */}
+        {showUpgradeCTA && userPlan === 'free' && !usageLimitReached && !usageSoftLimit && !usageHardBlock && (
+          <div className="flex-shrink-0 px-5 py-3">
+            <UpgradeCTA message="Upgrade ke Pro untuk mendapatkan 50 analisis/bulan dan fitur Company Context." />
+          </div>
+        )}
+
+        {/* Inline UpgradeCTA when free-tier user has used all 3 monthly analyses (used >= limit, used <= limit*2) */}
+        {usageLimitReached && !usageSoftLimit && !usageHardBlock && phase === 'input' && (
+          <div className="flex-shrink-0 px-5 py-3">
+            <UpgradeCTA message="Kamu sudah menggunakan semua 3 analisis gratis bulan ini. Upgrade ke Pro untuk melanjutkan dengan 50 analisis/bulan." />
+          </div>
+        )}
+
+        {/* Prominent inline UpgradeCTA for 4-6 analyses (soft limit: used > limit, used <= limit*2) — no blocking */}
+        {usageSoftLimit && phase === 'input' && (
+          <div className="flex-shrink-0 px-5 py-3">
+            <UpgradeCTA message="Kamu sudah melewati batas analisis gratis. Upgrade ke Pro sekarang untuk akses penuh dengan 50 analisis/bulan dan fitur Company Context." />
+          </div>
+        )}
+
+        {/* Full-screen blocking wall when usage exceeds 2x limit (>6 analyses) */}
+        {usageHardBlock && phase === 'input' && (
+          <UpgradeCTA
+            variant="blocking"
+            message="Kamu sudah jauh melewati batas analisis gratis. Upgrade ke Pro untuk melanjutkan analisis BRD."
+          />
+        )}
+
         <div className="flex flex-col flex-1 min-h-0">
           {phase === 'input' ? (
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-3xl mx-auto px-6 py-12">
-                <div className="mb-10">
-                  {isAuthenticated && (
-                  <button
-                    onClick={() => setPhase('select-project')}
-                    className="text-sm text-gray-400 hover:text-gray-700 transition-colors mb-5 block"
-                  >
-                    ← {selectedProject?.name ?? 'Pilih project'}
-                  </button>
+              {/* Only show BRD input form if not hard-blocked */}
+              {!usageHardBlock ? (
+              <div className="max-w-3xl mx-auto px-6 py-10">
+                <div className="mb-8">
+                  {userPlan === 'pro' && (
+                    <button
+                      onClick={() => setPhase('select-project')}
+                      className="text-sm text-gray-400 hover:text-gray-700 transition-colors mb-4 block"
+                    >
+                      ← {selectedProject?.name ?? 'Pilih project'}
+                    </button>
                   )}
                   <h1 className="text-3xl font-bold tracking-tight text-gray-900">Analisis BRD</h1>
                   <p className="mt-3 text-sm text-gray-500 max-w-xl">
@@ -772,12 +831,16 @@ export default function AnalyzePage() {
                   isLoading={false}
                 />
               </div>
+              ) : (
+              <div className="max-w-3xl mx-auto px-6 py-10 text-center">
+                <p className="text-gray-500 text-sm">Analisis BRD tidak tersedia. Silakan upgrade ke Pro untuk melanjutkan.</p>
+              </div>
+              )}
             </div>
           ) : phase === 'analyzing' ? (
             <AnalyzingState streamingText={streamingText} />
           ) : (
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-              {/* Living document shown in refining/finalizing/done alongside the chat */}
               {foundationData && (phase === 'refining' || phase === 'finalizing' || phase === 'done') && (
                 <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4 bg-gray-50">
                   <LivingDocument
@@ -797,6 +860,7 @@ export default function AnalyzePage() {
                 isRefining={isRefining}
                 isFinalizing={isFinalizing}
                 phase={phase as 'refining' | 'finalizing' | 'done'}
+                plan={userPlan}
                 onSend={handleSendMessage}
                 onReanalyze={handleReanalyze}
                 onSubmitQA={handleSubmitQA}
