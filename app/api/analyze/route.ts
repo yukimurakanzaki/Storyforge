@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
-import { google } from '@ai-sdk/google'
-import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
 import { sseEvent, createSSEStream } from '@/lib/sse'
@@ -236,48 +234,26 @@ export async function POST(request: NextRequest) {
 
     let accumulated = ''
     try {
-      if (modelConfig.provider === 'anthropic') {
-        // Pro tier: use Anthropic SDK directly with ZDR headers
-        const stream = anthropic.messages.stream({
-          model: modelConfig.model,
-          max_tokens: 4096,
-          temperature: 0,
-          system: buildSystemPromptWithContext(projectContext),
-          messages: [
-            {
-              role: 'user',
-              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
-            },
-          ],
-        })
+      const stream = anthropic.messages.stream({
+        model: modelConfig.model,
+        max_tokens: 4096,
+        temperature: 0,
+        system: buildSystemPromptWithContext(projectContext),
+        messages: [
+          {
+            role: 'user',
+            content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
+          },
+        ],
+      })
 
-        for await (const event of stream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            accumulated += event.delta.text
-            enqueue(sseEvent('delta', { text: event.delta.text }))
-          }
-        }
-      } else {
-        // Free tier: use Google Gemini via Vercel AI SDK
-        const result = streamText({
-          model: google(modelConfig.model),
-          system: buildSystemPromptWithContext(projectContext),
-          messages: [
-            {
-              role: 'user',
-              content: `Analisis BRD berikut dan kembalikan JSON valid (tanpa markdown):\n\n${validation.text}`,
-            },
-          ],
-          maxOutputTokens: 4096,
-          temperature: 0,
-        })
-
-        for await (const chunk of result.textStream) {
-          accumulated += chunk
-          enqueue(sseEvent('delta', { text: chunk }))
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          accumulated += event.delta.text
+          enqueue(sseEvent('delta', { text: event.delta.text }))
         }
       }
       console.log('[api/analyze] step3: stream finished | accumulated length:', accumulated.length)
@@ -324,10 +300,8 @@ export async function POST(request: NextRequest) {
         ? {
             name: err.name,
             message: err.message,
-            // @ts-expect-error Anthropic SDK APIError fields
-            status: (err as { status?: number }).status,
-            // @ts-expect-error Anthropic SDK APIError fields
-            error: (err as { error?: unknown }).error,
+            status: (err as unknown as { status?: number }).status,
+            error: (err as unknown as { error?: unknown }).error,
             stack: err.stack,
           }
         : err

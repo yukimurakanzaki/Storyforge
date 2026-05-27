@@ -1,6 +1,4 @@
 import { anthropic } from '@/lib/anthropic'
-import { google } from '@ai-sdk/google'
-import { generateText } from 'ai'
 import type Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -125,34 +123,18 @@ export async function POST(request: NextRequest) {
   const modelConfig = getModelConfig(plan)
 
   try {
-    let text: string
+    const message = await anthropic.messages.create({
+      model: modelConfig.model,
+      max_tokens: 8192,
+      temperature: 0,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }],
+    })
 
-    if (modelConfig.provider === 'anthropic') {
-      // Pro tier: use Anthropic SDK directly with ZDR headers
-      const message = await anthropic.messages.create({
-        model: modelConfig.model,
-        max_tokens: 8192,
-        temperature: 0,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      })
-
-      text = message.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('')
-    } else {
-      // Free tier: use Google Gemini via Vercel AI SDK
-      const result = await generateText({
-        model: google(modelConfig.model),
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-        maxOutputTokens: 8192,
-        temperature: 0,
-      })
-
-      text = result.text
-    }
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
 
     const cleaned = text
       .replace(/^```(?:json)?\s*/i, '')

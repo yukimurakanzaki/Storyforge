@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
-import { google } from '@ai-sdk/google'
-import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { sseEvent, createSSEStream } from '@/lib/sse'
 import { getModelConfig } from '@/lib/model-selector'
@@ -154,38 +152,21 @@ export async function POST(request: NextRequest) {
   ;(async () => {
     let accumulated = ''
     try {
-      if (modelConfig.provider === 'anthropic') {
-        // Pro tier: use Anthropic SDK directly with ZDR headers
-        const stream = anthropic.messages.stream({
-          model: modelConfig.model,
-          max_tokens: 6000,
-          temperature: 0,
-          system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),
-          messages: anthropicMessages,
-        })
+      const stream = anthropic.messages.stream({
+        model: modelConfig.model,
+        max_tokens: 6000,
+        temperature: 0,
+        system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),
+        messages: anthropicMessages,
+      })
 
-        for await (const event of stream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            accumulated += event.delta.text
-            enqueue(sseEvent('delta', { text: event.delta.text }))
-          }
-        }
-      } else {
-        // Free tier: use Google Gemini via Vercel AI SDK
-        const result = streamText({
-          model: google(modelConfig.model),
-          system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),
-          messages: anthropicMessages,
-          maxOutputTokens: 6000,
-          temperature: 0,
-        })
-
-        for await (const chunk of result.textStream) {
-          accumulated += chunk
-          enqueue(sseEvent('delta', { text: chunk }))
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          accumulated += event.delta.text
+          enqueue(sseEvent('delta', { text: event.delta.text }))
         }
       }
 

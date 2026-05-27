@@ -4,11 +4,11 @@ import type { AIProvider, ModelConfig } from '@/lib/model-selector'
 
 describe('getModelConfig', () => {
   describe('free plan', () => {
-    it('returns Google Gemini 2.0 Flash config', () => {
+    it('returns Anthropic Claude Haiku 4.5 config', () => {
       const config = getModelConfig('free')
 
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.0-flash')
+      expect(config.provider).toBe('anthropic')
+      expect(config.model).toBe('claude-haiku-4-5-20251001')
     })
 
     it('does not include extra headers', () => {
@@ -39,23 +39,21 @@ describe('getModelConfig', () => {
       // TypeScript would normally prevent this, but testing runtime safety
       const config = getModelConfig('unknown' as 'free' | 'pro')
 
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.0-flash')
+      expect(config.provider).toBe('anthropic')
+      expect(config.model).toBe('claude-haiku-4-5-20251001')
     })
   })
 
   describe('type exports', () => {
-    it('AIProvider type accepts google and anthropic', () => {
-      const google: AIProvider = 'google'
+    it('AIProvider type accepts anthropic', () => {
       const anthropic: AIProvider = 'anthropic'
 
-      expect(google).toBe('google')
       expect(anthropic).toBe('anthropic')
     })
 
     it('ModelConfig interface shape is correct', () => {
       const config: ModelConfig = {
-        provider: 'google',
+        provider: 'anthropic',
         model: 'test-model',
       }
 

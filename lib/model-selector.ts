@@ -5,7 +5,7 @@
  * and model configuration for the given subscription plan.
  */
 
-export type AIProvider = 'google' | 'anthropic'
+export type AIProvider = 'anthropic'
 
 export interface ModelConfig {
   provider: AIProvider
@@ -18,9 +18,8 @@ export interface ModelConfig {
  * Returns the AI model configuration based on user's subscription plan.
  * Pure function — no database access.
  *
- * - free → Google Gemini 2.0 Flash
- * - pro → Anthropic Claude Haiku 4.5 with ZDR header
- * - unknown plan → defaults to free config (defensive fallback)
+ * Both tiers use Anthropic Claude Haiku 4.5 for simplicity (single provider).
+ * Pro tier gets ZDR header for zero data retention.
  */
 export function getModelConfig(plan: 'free' | 'pro'): ModelConfig {
   switch (plan) {
@@ -33,8 +32,8 @@ export function getModelConfig(plan: 'free' | 'pro'): ModelConfig {
     case 'free':
     default:
       return {
-        provider: 'google',
-        model: 'gemini-2.0-flash',
+        provider: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
       }
   }
 }
