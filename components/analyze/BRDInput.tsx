@@ -26,6 +26,7 @@ export function BRDInput({
 }: BRDInputProps) {
   const wordCount = countWords(value)
   const overLimit = !isPro && wordCount > MAX_WORDS_FREE
+  const tooShort = wordCount > 0 && wordCount < 200
 
   return (
     <div className="flex flex-col gap-3">
@@ -60,6 +61,12 @@ export function BRDInput({
           <strong>Batas kata terlampaui.</strong> Akun Free hanya mendukung hingga{' '}
           {MAX_WORDS_FREE.toLocaleString('id-ID')} kata. Upgrade ke Pro untuk analisis BRD
           yang lebih panjang.
+        </div>
+      )}
+
+      {tooShort && !overLimit && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          BRD ini masih singkat. StoryForge tetap bisa menganalisis, tapi hasilnya akan lebih kuat jika kamu menambahkan alur user, tujuan bisnis, dan aturan saat proses gagal.
         </div>
       )}
 

@@ -14,15 +14,20 @@ import type {
   SessionState,
   FoundationData,
 } from '@/types'
+import type { EnhancedAnalysisResult } from '@/types/analysis-v2'
+import { isEnhancedResult } from '@/types/analysis-v2'
 import Link from 'next/link'
 import { SessionSidebar } from '@/components/analyze/SessionSidebar'
 import { ProjectSelector } from '@/components/analyze/ProjectSelector'
 import { LivingDocument } from '@/components/analyze/LivingDocument'
 import { UsageCounter } from '@/components/analyze/UsageCounter'
 import { UpgradeCTA } from '@/components/analyze/UpgradeCTA'
+import { AnalysisProgress } from '@/components/analyze/AnalysisProgress'
 import { TierBadge } from '@/components/ui/TierBadge'
 import { createClient } from '@/lib/supabase/client'
 import { readSSEStream } from '@/lib/sse-client'
+import { REFINEMENT_CHAT_INTRO } from '@/lib/analysis/constants'
+import { mergeRefinementAnalysis } from '@/lib/analysis/refinement-state'
 
 interface RefineAPIResponse {
   message: string
@@ -31,6 +36,9 @@ interface RefineAPIResponse {
 }
 
 type AppPhase = 'select-project' | 'input' | 'analyzing' | 'refining' | 'finalizing' | 'done'
+type StoredAnalysisResult = AnalysisResult & Partial<EnhancedAnalysisResult> & {
+  needsReanalysis?: boolean
+}
 
 const DEFAULT_SECTION_STATES: SectionStates = {
   foundation: 'empty',
@@ -48,33 +56,6 @@ function buildFirstAssistantMessage(analysis: AnalysisResult): string {
     return 'Analisis selesai. Readiness score sudah cukup tinggi — klik "Generate User Stories" saat siap.'
   }
   return `Ditemukan ${analysis.gapList.length} gap dan ${analysis.clarificationQuestions.length} pertanyaan klarifikasi. Jawab pertanyaan di atas atau ketik langsung di sini untuk iterasi.`
-}
-
-function AnalyzingState({ streamingText }: { streamingText: string }) {
-  return (
-    <div
-      role="status"
-      aria-label="Menganalisis BRD"
-      className="flex flex-col items-center justify-center flex-1 py-20"
-    >
-      <div className="flex flex-col items-center gap-3">
-        <div
-          aria-hidden="true"
-          className="w-10 h-10 rounded-full border-teal-200 border-t-teal-600 animate-spin motion-reduce:animate-none"
-          style={{ borderWidth: 3, borderStyle: 'solid' }}
-        />
-        <p className="text-sm text-gray-600 font-medium">Menganalisis BRD...</p>
-      </div>
-      <p className="mt-6 text-xs text-gray-400">Biasanya selesai dalam 15–30 detik</p>
-      {streamingText && (
-        <div className="mt-8 max-w-xl w-full px-4">
-          <pre className="text-xs text-gray-400 whitespace-pre-wrap break-words max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3 border border-gray-100">
-            {streamingText}
-          </pre>
-        </div>
-      )}
-    </div>
-  )
 }
 
 function buildQASubmissionMessage(
@@ -96,8 +77,9 @@ export default function AnalyzePage() {
   const [brdText, setBrdText] = useState('')
   const [phase, setPhase] = useState<AppPhase>('input')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [result, setResult] = useState<AnalysisResult | undefined>(undefined)
+  const [result, setResult] = useState<StoredAnalysisResult | undefined>(undefined)
   const [streamingText, setStreamingText] = useState('')
+  const [analysisStatus, setAnalysisStatus] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [requirements, setRequirements] = useState<RequirementsResult | null>(null)
   const [isRefining, setIsRefining] = useState(false)
@@ -268,6 +250,7 @@ export default function AnalyzePage() {
   async function handleAnalyze(text: string) {
     setPhase('analyzing')
     setStreamingText('')
+    setAnalysisStatus('Sedang membaca BRD...')
     setResult(undefined)
     setError(undefined)
     setMessages([])
@@ -288,7 +271,13 @@ export default function AnalyzePage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        setError(body.error ?? `Server error ${res.status}`)
+        const friendlyError =
+          res.status === 413
+            ? 'BRD terlalu panjang. Coba fokuskan ke satu fitur atau satu alur utama.'
+            : res.status === 429
+              ? 'Batas analisis bulan ini sudah tercapai. Kamu tetap bisa membuka hasil sebelumnya.'
+              : body.message ?? body.error ?? `Server error ${res.status}`
+        setError(friendlyError)
         setPhase('input')
         return
       }
@@ -297,10 +286,13 @@ export default function AnalyzePage() {
         if (event.name === 'delta') {
           const { text: chunk } = event.data as { text: string }
           setStreamingText(prev => prev + chunk)
+        } else if (event.name === 'status') {
+          const { message } = event.data as { message: string }
+          setAnalysisStatus(message)
         } else if (event.name === 'done') {
           const parsed = event.data as Record<string, unknown>
 
-          const analysisResult: AnalysisResult = {
+          const analysisResult: StoredAnalysisResult = {
             ...(parsed as Omit<AnalysisResult, 'sessionId' | 'createdAt'>),
             sessionId: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
@@ -354,7 +346,7 @@ export default function AnalyzePage() {
             }
           }
 
-          const storedAnalysisResult: AnalysisResult = {
+          const storedAnalysisResult: StoredAnalysisResult = {
             ...analysisResult,
             id: savedAnalysisId,
           }
@@ -430,10 +422,7 @@ export default function AnalyzePage() {
           setMessages(finalMessages)
 
           if (parsed.analysis) {
-            const updatedResult: AnalysisResult = {
-              ...currentResult,
-              ...parsed.analysis,
-            }
+            const updatedResult = mergeRefinementAnalysis(currentResult, parsed.analysis)
             setResult(updatedResult)
 
             if (foundationData) {
@@ -838,17 +827,30 @@ export default function AnalyzePage() {
               )}
             </div>
           ) : phase === 'analyzing' ? (
-            <AnalyzingState streamingText={streamingText} />
+            <AnalysisProgress statusMessage={analysisStatus || (streamingText ? 'Menganalisis BRD...' : undefined)} />
           ) : (
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
               {foundationData && (phase === 'refining' || phase === 'finalizing' || phase === 'done') && (
                 <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4 bg-gray-50">
                   <LivingDocument
                     foundationData={foundationData}
+                    enhancedResult={result && isEnhancedResult(result) ? result : null}
                     sectionStates={sectionStates}
                     sessionState={sessionState}
                     onCopySection={handleCopySection}
                   />
+                </div>
+              )}
+              {result && isEnhancedResult(result) && (
+                <div className="border-b border-gray-100 bg-white px-6 py-3">
+                  <p className="text-sm text-gray-600">{REFINEMENT_CHAT_INTRO}</p>
+                </div>
+              )}
+              {result?.needsReanalysis && (
+                <div className="border-b border-amber-100 bg-amber-50 px-6 py-3">
+                  <p className="text-sm text-amber-900">
+                    Analisis sudah diperbarui dari chat. Jalankan analisis ulang untuk membuat ulang Ringkasan Temuan, Gap Card, dan Peta Perjalanan.
+                  </p>
                 </div>
               )}
               <RefinementChat

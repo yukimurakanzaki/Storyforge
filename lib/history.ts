@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { AnalysisResult, GapItem } from '@/types'
+import type { GapCard, JourneyMap, RingkasanTemuan, ScoreComponents } from '@/types/analysis-v2'
 
 export interface SavedAnalysis {
   id: string
@@ -12,6 +13,11 @@ export interface SavedAnalysis {
   session_id: string | null
   parent_analysis_id: string | null
   created_at: string
+  score_components?: ScoreComponents | null
+  ringkasan_temuan?: RingkasanTemuan | null
+  gap_cards?: GapCard[] | null
+  journey_map?: JourneyMap | null
+  schema_version?: number | null
 }
 
 export async function saveAnalysisResult(

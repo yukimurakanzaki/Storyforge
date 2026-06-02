@@ -165,6 +165,7 @@ export type FoundationData = {
 
 export type LivingDocumentProps = {
   foundationData: FoundationData | null
+  enhancedResult?: import('./analysis-v2').EnhancedAnalysisResult | null
   sectionStates: SectionStates
   sessionState: SessionState
   onCopySection: (section: string, content: string) => void

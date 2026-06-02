@@ -5,6 +5,9 @@ import { notFound, redirect } from 'next/navigation'
 import { SectionCard } from '@/components/analyze/SectionCard'
 import { FoundationSection } from '@/components/analyze/FoundationSection'
 import type { FoundationData, SectionStates } from '@/types'
+import type { EnhancedAnalysisResult } from '@/types/analysis-v2'
+import { OutputPanelV2 } from '@/components/analyze/OutputPanelV2'
+import { SECTION_LABELS } from '@/lib/analysis/constants'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -52,6 +55,24 @@ export default async function SessionPage({ params }: Props) {
   const score = foundationData.readiness_score ?? 0
   const scoreColor = score >= 80 ? 'text-teal-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'
   const projectName = (session as unknown as { projects?: { name: string } | null }).projects?.name ?? 'Tanpa Project'
+  const schemaVersion = (session.schema_version as number | null) ?? 1
+  const enhancedResult: EnhancedAnalysisResult | null =
+    schemaVersion === 2 &&
+    session.score_components &&
+    session.ringkasan_temuan &&
+    Array.isArray(session.gap_cards)
+      ? {
+          gapList: (session.gap_list as EnhancedAnalysisResult['gapList']) ?? [],
+          clarificationQuestions: (session.clarification_questions as string[]) ?? [],
+          readinessScore: (session.readiness_score as number) ?? 0,
+          readinessLabel: (session.readiness_label as string) ?? 'Perlu Klarifikasi',
+          scoreComponents: session.score_components as EnhancedAnalysisResult['scoreComponents'],
+          ringkasanTemuan: session.ringkasan_temuan as EnhancedAnalysisResult['ringkasanTemuan'],
+          gapCards: session.gap_cards as EnhancedAnalysisResult['gapCards'],
+          journeyMap: (session.journey_map as EnhancedAnalysisResult['journeyMap']) ?? null,
+          version: 2,
+        }
+      : null
 
   return (
     <main id="main-content" className="max-w-3xl mx-auto px-4 py-8 space-y-4">
@@ -69,13 +90,13 @@ export default async function SessionPage({ params }: Props) {
       </div>
 
       <SectionCard
-        title="Foundation"
+        title={enhancedResult ? SECTION_LABELS.outputPanel : 'Foundation'}
         icon={`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`}
-        iconLabel="Foundation"
+        iconLabel={enhancedResult ? SECTION_LABELS.outputPanel : 'Foundation'}
         badges={['PM', 'Semua']}
         status={sectionStates.foundation ?? 'done'}
       >
-        <FoundationSection data={foundationData} />
+        {enhancedResult ? <OutputPanelV2 result={enhancedResult} /> : <FoundationSection data={foundationData} />}
       </SectionCard>
 
       <div className="text-center pt-4">

@@ -1,6 +1,108 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function setupAuthenticatedUser(
+  page: Page,
+  plan: 'free' | 'pro' = 'free'
+) {
+  const expiresAt = Math.floor(Date.now() / 1000) + 3600
+  const user = {
+    id: 'user-123',
+    email: 'user@example.com',
+    email_confirmed_at: new Date().toISOString(),
+    app_metadata: { providers: ['email'] },
+    user_metadata: {},
+    aud: 'authenticated',
+    role: 'authenticated',
+  }
+  const session = {
+    access_token: 'mock-access-token',
+    refresh_token: 'mock-refresh-token',
+    expires_in: 3600,
+    expires_at: expiresAt,
+    token_type: 'bearer',
+    user,
+  }
+  const base64Value = Buffer.from(JSON.stringify(session)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+  await page.context().addCookies([
+    {
+      name: 'sb-shnbucctqnaruflfdszg-auth-token',
+      value: `base64-${base64Value}`,
+      domain: '127.0.0.1',
+      path: '/',
+    },
+    {
+      name: 'sb-shnbucctqnaruflfdszg-auth-token',
+      value: `base64-${base64Value}`,
+      domain: 'localhost',
+      path: '/',
+    },
+  ])
+
+  await page.addInitScript(({ expires, user: initUser }) => {
+    window.localStorage.setItem(
+      'sb-shnbucctqnaruflfdszg-auth-token',
+      JSON.stringify({
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        expires_at: expires,
+        token_type: 'bearer',
+        user: initUser,
+      })
+    )
+  }, { expires: expiresAt, user })
+
+  await page.route('**/auth/v1/user*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(user),
+    })
+  })
+
+  await page.route('**/auth/v1/token*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
+        user,
+      }),
+    })
+  })
+
+  await page.route('**/rest/v1/subscriptions*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ plan }),
+    })
+  })
+
+  await page.route('**/api/usage', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ used: 1, limit: plan === 'pro' ? 50 : 3 }),
+    })
+  })
+
+  await page.route('**/api/save-session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+}
 
 test('user can navigate to analyze page and see mocked analysis results', async ({ page }) => {
+  await setupAuthenticatedUser(page, 'free')
+
   await page.route('**/api/analyze', async (route) => {
     await route.fulfill({
       status: 200,
@@ -36,6 +138,14 @@ test('user can navigate to analyze page and see mocked analysis results', async 
     })
   })
 
+  await page.route('**/api/save-session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'BRD-mu Siap Build?' })).toBeVisible()
@@ -46,7 +156,7 @@ test('user can navigate to analyze page and see mocked analysis results', async 
   await expect(page.getByLabel('BRD / Dokumen Produk')).toBeVisible()
 
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
-  await page.getByRole('button', { name: /Analyze BRD/i }).click()
+  await page.getByRole('button', { name: /Analisis BRD/i }).click()
 
   await expect(page.getByText('72').first()).toBeVisible()
   await expect(page.getByText('/100').filter({ visible: true }).first()).toBeVisible()
@@ -64,6 +174,8 @@ test('user can navigate to analyze page and see mocked analysis results', async 
 })
 
 test('user can refine and generate requirements from mocked API', async ({ page }) => {
+  await setupAuthenticatedUser(page, 'free')
+
   await page.route('**/api/analyze', async (route) => {
     await route.fulfill({
       status: 200,
@@ -168,10 +280,26 @@ test('user can refine and generate requirements from mocked API', async ({ page 
     })
   })
 
+  await page.route('**/api/save-session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+
+  await page.route('**/api/save-session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+
   await page.goto('/analyze')
 
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
-  await page.getByRole('button', { name: /Analyze BRD/i }).click()
+  await page.getByRole('button', { name: /Analisis BRD/i }).click()
 
   await page.getByPlaceholder(/Tambah konteks.*jawab pertanyaan/i).fill(
     'Refund hanya bisa disetujui oleh finance lead setelah nominal diverifikasi.',
@@ -190,6 +318,8 @@ test('user can refine and generate requirements from mocked API', async ({ page 
 })
 
 test('user sees a helpful error when refinement fails', async ({ page }) => {
+  await setupAuthenticatedUser(page, 'free')
+
   await page.route('**/api/analyze', async (route) => {
     await route.fulfill({
       status: 200,
@@ -236,14 +366,14 @@ test('user sees a helpful error when refinement fails', async ({ page }) => {
   await page.goto('/analyze')
 
   await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
-  await page.getByRole('button', { name: /Analyze BRD/i }).click()
+  await page.getByRole('button', { name: /Analisis BRD/i }).click()
 
   await page.getByPlaceholder(/Tambah konteks.*jawab pertanyaan/i).fill(
     'Kami akan memakai Xendit untuk pembayaran kartu dan virtual account.',
   )
   await page.getByRole('button', { name: 'Kirim pesan' }).click()
 
-  await expect(page.getByText('Gagal memproses. Coba lagi.')).toBeVisible()
+  await expect(page.getByText('Gagal memproses. Coba lagi.').first()).toBeVisible()
   await expect(page.getByText('Payment gateway mana yang akan digunakan?')).toBeVisible()
 })
 
@@ -411,6 +541,14 @@ test('living document — create project, paste BRD, see foundation section', as
     })
   })
 
+  await page.route('**/api/save-session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+
   await page.goto('/analyze')
 
   // Project selector appears
@@ -429,13 +567,13 @@ test('living document — create project, paste BRD, see foundation section', as
   await page.getByRole('textbox').fill(
     'Sistem perlu fitur approval invoice. Finance Approver bisa approve atau reject invoice dari vendor.'
   )
-  await page.getByRole('button', { name: /Analisis/i }).click()
+  await page.getByRole('button', { name: 'Analisis BRD' }).click()
 
   // Analyzing state
 
   // Foundation section appears
   await expect(page.getByText('Foundation')).toBeVisible({ timeout: 30000 })
-  await expect(page.getByText('Readiness Score')).toBeVisible()
+  await expect(page.getByText('Readiness Score / 100')).toBeVisible()
 })
 
 // TODO: full validation requires a seeded session with auth.
@@ -446,7 +584,7 @@ test.skip('living document — re-open session shows readiness score in sidebar'
   // Score badge only appears after analysis — tested manually until session seeding is available
 })
 
-test('guest at quota cannot start another analysis', async ({ page }) => {
+test('unauthenticated user is redirected before starting analysis', async ({ page }) => {
   let analyzeCalls = 0
   await page.route('**/api/analyze', async (route) => {
     analyzeCalls += 1
@@ -463,20 +601,8 @@ test('guest at quota cannot start another analysis', async ({ page }) => {
   })
 
   await page.goto('/analyze')
-  await page.evaluate(() => {
-    window.localStorage.setItem(
-      'sf_guest_usage_v1',
-      JSON.stringify({
-        count: 5,
-        resetAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-    )
-  })
-  await page.reload()
 
-  await page.getByRole('button', { name: /Coba dengan contoh BRD/i }).click()
-  await page.getByRole('button', { name: /Analyze BRD/i }).click()
-
-  await expect(page.getByText(/Batas analisis gratis tercapai/i)).toBeVisible()
+  await expect(page).toHaveURL(/\/login\?redirect=%2Fanalyze/)
+  await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible()
   expect(analyzeCalls).toBe(0)
 })

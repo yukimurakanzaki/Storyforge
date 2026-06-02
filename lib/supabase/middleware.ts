@@ -76,6 +76,7 @@ export async function updateSession(request: NextRequest) {
     user = {
       id: 'user-123',
       email: 'user@example.com',
+      email_confirmed_at: new Date().toISOString(),
       app_metadata: { providers: ['email'] },
       user_metadata: {},
       aud: 'authenticated',
