@@ -3,7 +3,9 @@
 import { SectionCard } from './SectionCard'
 import { SectionStates, SessionState, LivingDocumentProps } from '@/types'
 import { FoundationSection } from './FoundationSection'
-import type { FoundationData } from '@/types'
+import { OutputPanelV2 } from './OutputPanelV2'
+import { SECTION_LABELS } from '@/lib/analysis/constants'
+import { formatAnalysisReviewText } from '@/lib/analysis/copy-formatter'
 
 // SVG icons with aria-hidden (decorative, not semantic)
 const ICONS: Record<string, { svg: string; label: string }> = {
@@ -57,21 +59,37 @@ const SECTION_META: { key: SectionKey; title: string; badges: string[] }[] = [
   { key: 'stakeholder', title: 'Stakeholder View', badges: ['Business'] },
 ]
 
-export function LivingDocument({ foundationData, sectionStates, sessionState, onCopySection }: LivingDocumentProps) {
+export function LivingDocument({
+  foundationData,
+  enhancedResult,
+  sectionStates,
+  sessionState,
+  onCopySection,
+}: LivingDocumentProps) {
   const isReady = sessionState === 'ready' || sessionState === 'done'
 
   return (
     <div className="space-y-3">
       {/* Section 1: Foundation */}
       <SectionCard
-        title="Foundation"
+        title={enhancedResult ? SECTION_LABELS.outputPanel : 'Foundation'}
         icon={ICONS.foundation.svg}
-        iconLabel={ICONS.foundation.label}
+        iconLabel={enhancedResult ? SECTION_LABELS.outputPanel : ICONS.foundation.label}
         badges={['PM', 'Semua']}
         status={sectionStates.foundation}
-        onCopy={foundationData ? () => onCopySection('foundation', JSON.stringify(foundationData, null, 2)) : undefined}
+        onCopy={
+          enhancedResult
+            ? () => onCopySection('analysis-v2', formatAnalysisReviewText(enhancedResult))
+            : foundationData
+              ? () => onCopySection('foundation', JSON.stringify(foundationData, null, 2))
+              : undefined
+        }
       >
-        {foundationData && <FoundationSection data={foundationData} />}
+        {enhancedResult ? (
+          <OutputPanelV2 result={enhancedResult} />
+        ) : (
+          foundationData && <FoundationSection data={foundationData} />
+        )}
       </SectionCard>
 
       {/* Sections 2–8: collapsed into one locked block until ready */}

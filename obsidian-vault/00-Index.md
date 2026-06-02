@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-05-23 (WIB)
-**Status:** Pre-MVP, UI design polished (impeccable audit 22→24/40), error recovery fixed
+**Last Updated:** 2026-06-02 (WIB)
+**Status:** Pre-MVP - StoryForge V2 PRD refinement implemented; enhanced PM analysis flow verified locally
 
 ---
 
@@ -20,7 +20,12 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]] — **LATEST**
+- [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]] - **LATEST**
+- [[03-Sessions/2026-05-27-Portfolio-Mockup-Animation-Design|2026-05-27: Portfolio Mockup Animation & Design Fixes]] — **LATEST**
+- [[03-Sessions/2026-05-27-Portfolio-Design-Audit-Fix|2026-05-27: Portfolio Design Audit & Fix]]
+- [[03-Sessions/2026-05-24-Portfolio-Deploy|2026-05-24: Portfolio Deploy to Production]]
+- [[03-Sessions/2026-05-24-Portfolio-Production-Readiness|2026-05-24: Portfolio Production Readiness Audit]]
+- [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]]
 - [[03-Sessions/2026-05-21-eslint-flat-config-migration|2026-05-21: ESLint Flat Config Migration & Clean Build]]
 - [[03-Sessions/2026-05-10-password-auth-admin-beta|2026-05-10: Password Auth + Admin Beta Magic Link]]
 - [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]]
@@ -60,9 +65,25 @@
 
 ---
 
-## ✅ Latest Status — 2026-05-23
+## Latest Status - 2026-06-02
 
-### Completed ✅
+### Completed This Session ✅
+
+- StoryForge PRD refinement V2 implemented: prioritized summary, Gap Cards, Journey Map data, score breakdown, and V2 persistence.
+- Analyze flow integrated: V2 output renders inside LivingDocument as Hasil Review BRD, with RefinementChat preserved below.
+- Refinement follow-up handled: stale V2 sections are removed after chat refinement, result is marked for reanalysis, and copy output is PM-readable plain text.
+- Auth-required E2E flow aligned: authenticated analysis and unauthenticated login redirect are covered.
+- Verification green: npm run lint, npm test (39 files, 261 tests), npx tsc --noEmit, npm run build, and Playwright E2E (5 passed, 1 skipped) passed.
+
+- ✅ **Animated phone mockups** — 3-phone floating group on BAF + Danamas case study pages (kanbanbot.online style). Live on prod.
+- ✅ **Service cards → /contact** — PM Consulting + PM Portfolio Building cards now link to contact page with "Get in touch →" CTA
+- ✅ **Dark mode toggle fixed** — Tailwind v4 `@custom-variant dark` added so ThemeToggle actually works
+- ✅ **Light mode readability fixed** — Case study prose `@reference` pointed to global.css; text now correctly dark in light mode
+- ✅ **All pushed to GitHub + deployed** — `origin/main` tracking set up; production live and tested
+
+---
+
+### Previous Completed ✅
 
 - ✅ **Impeccable design audit + polish** — Score 22→24/40; dark theme fixed, indigo→teal, side-stripe ban, locked card wall collapsed, motion-reduce added, modal focus trap fixed
 - ✅ **Refine error recovery fixed** — User message preserved on API failure; error bubble shown in chat instead of silently deleting message
@@ -233,6 +254,6 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]] — **LATEST**
+**Session Log:** [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]] - **LATEST**
 
 **Auto-updated by Claude**
