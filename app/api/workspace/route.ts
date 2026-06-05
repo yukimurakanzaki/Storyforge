@@ -140,3 +140,19 @@ export async function POST(request: NextRequest) {
 
   return new Response(readable, { headers })
 }
+
+// app/api/workspace/route.ts — add below the existing POST
+export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const sessionId = new URL(request.url).searchParams.get('sessionId')
+  if (!sessionId) return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
+
+  const { data: row } = await supabase.from('analysis_results').select('*')
+    .eq('session_id', sessionId).eq('user_id', user.id).single()
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  return NextResponse.json({ state: rowToState(row) })
+}
