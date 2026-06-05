@@ -44,6 +44,36 @@ export default function SettingsPage() {
   const [deletionError, setDeletionError] = useState('')
   const [deletionLoading, setDeletionLoading] = useState(false)
 
+  // --- Konteks & Memori State ---
+  const [ctx, setCtx] = useState({ industry: '', role: '', compliance: '', techDefaults: '', standingInstructions: '', prdTemplate: '' })
+  const [ctxSaved, setCtxSaved] = useState(false)
+  const [ctxSaving, setCtxSaving] = useState(false)
+
+  // --- Konteks & Memori Load + Save ---
+  useEffect(() => {
+    fetch('/api/user-context').then(r => r.json()).then(({ context }) => {
+      if (context) setCtx({
+        industry: context.industry ?? '', role: context.role ?? '',
+        compliance: (context.compliance ?? []).join(', '),
+        techDefaults: Object.entries(context.tech_defaults ?? {}).map(([k, v]) => `${k}: ${v}`).join('\n'),
+        standingInstructions: context.standing_instructions ?? '', prdTemplate: context.prd_template ?? '',
+      })
+    }).catch(() => {})
+  }, [])
+
+  async function saveContext(e: React.FormEvent) {
+    e.preventDefault(); setCtxSaving(true); setCtxSaved(false)
+    const techDefaults: Record<string, string> = {}
+    for (const line of ctx.techDefaults.split('\n')) {
+      const [k, ...rest] = line.split(':'); if (k.trim() && rest.length) techDefaults[k.trim()] = rest.join(':').trim()
+    }
+    const res = await fetch('/api/user-context', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ industry: ctx.industry, role: ctx.role,
+        compliance: ctx.compliance.split(',').map(s => s.trim()).filter(Boolean),
+        techDefaults, standingInstructions: ctx.standingInstructions, prdTemplate: ctx.prdTemplate }) })
+    setCtxSaving(false); if (res.ok) setCtxSaved(true)
+  }
+
   // --- Simple Logout Handler ---
   async function handleSimpleLogout() {
     setSimpleLogoutLoading(true)
@@ -183,6 +213,37 @@ export default function SettingsPage() {
 
       <main className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Pengaturan Akun</h1>
+
+        {/* Konteks & Memori Section */}
+        <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Konteks &amp; Memori</h2>
+          <p className="text-sm text-gray-500 mb-4">Dibaca AI sebelum menganalisis setiap requirement — agar pertanyaannya relevan dan kontradiksi (mis. SFTP vs S3, pelanggaran OJK) langsung ditandai.</p>
+          <form onSubmit={saveContext} className="flex flex-col gap-4">
+            <label className="text-sm font-medium text-gray-700">Industri
+              <input value={ctx.industry} onChange={e => setCtx({ ...ctx, industry: e.target.value })} placeholder="mis. fintech"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+            <label className="text-sm font-medium text-gray-700">Peran kamu
+              <input value={ctx.role} onChange={e => setCtx({ ...ctx, role: e.target.value })} placeholder="mis. Product Manager"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+            <label className="text-sm font-medium text-gray-700">Regulasi / compliance (pisahkan dengan koma)
+              <input value={ctx.compliance} onChange={e => setCtx({ ...ctx, compliance: e.target.value })} placeholder="OJK, PDP"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+            <label className="text-sm font-medium text-gray-700">Default teknis (satu per baris, format key: value)
+              <textarea value={ctx.techDefaults} onChange={e => setCtx({ ...ctx, techDefaults: e.target.value })} rows={3} placeholder={"storage: S3\nbackend: Supabase"}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono" /></label>
+            <label className="text-sm font-medium text-gray-700">Instruksi tetap untuk AI
+              <textarea value={ctx.standingInstructions} onChange={e => setCtx({ ...ctx, standingInstructions: e.target.value })} rows={3} placeholder="mis. Selalu jawab dalam Bahasa Indonesia. Hindari jargon."
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+            <label className="text-sm font-medium text-gray-700">Template PRD (opsional — kosongkan untuk format default)
+              <textarea value={ctx.prdTemplate} onChange={e => setCtx({ ...ctx, prdTemplate: e.target.value })} rows={4} placeholder="Tempel struktur PRD pilihanmu di sini."
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono" /></label>
+            <div className="flex items-center gap-3">
+              <button type="submit" disabled={ctxSaving} className="self-start rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60">
+                {ctxSaving ? 'Menyimpan...' : 'Simpan Konteks'}</button>
+              {ctxSaved && <span className="text-sm text-teal-600">Tersimpan ✓</span>}
+            </div>
+          </form>
+        </section>
 
         {/* Security Section */}
         <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
