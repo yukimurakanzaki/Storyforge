@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-06-03 (WIB)
-**Status:** Pre-MVP — Living BRD Workspace epic + Phase 1 plans (BE + FE) written and self-reviewed; ready to execute
+**Last Updated:** 2026-06-05 (WIB)
+**Status:** Pre-MVP — Living BRD Workspace **Phase 1 code-complete** (backend Stories 1–2 + frontend Stories 3–7) on branch `feat/living-brd-workspace`, behind `NEXT_PUBLIC_LIVING_WORKSPACE`; manual smoke + merge pending
 
 ---
 
@@ -20,6 +20,9 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|2026-06-05: Living BRD Workspace — Phase 1 BUILD]] — **LATEST**
+- [[03-Sessions/2026-06-05-Web-App-Design-Guidance|2026-06-05: Web App Design Guidance]]
+- [[03-Sessions/2026-06-05-GitHub-SaaS-Repo-Research|2026-06-05: GitHub SaaS Repo Research]] — **LATEST**
 - [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
 - [[03-Sessions/2026-06-03-Done-State-Completion-UX|2026-06-03: Done-State Completion UX]]
 - [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]]
@@ -67,7 +70,28 @@
 
 ---
 
-## Latest Status - 2026-06-03
+## Latest Status - 2026-06-05
+
+### Completed This Session ✅ (Living BRD Workspace — Phase 1 BUILD)
+
+- **Phase 1 code-complete** on branch `feat/living-brd-workspace`, behind `NEXT_PUBLIC_LIVING_WORKSPACE`. Executed both plans via subagent-driven development (implementer + spec review + code-quality review per task group).
+- **Backend (Stories 1–2):** shared types + pure libs (score, reducer, compaction, store w/ legacy fallback, prompts, context-loader); migrations `010_living_workspace` + `011_user_context` applied to Supabase; orchestrator `POST /api/workspace` (one model turn, SSE, `sanitizeTurn` hardening); resume `GET`, panel `PATCH /api/workspace/gap`, `GET/PUT /api/user-context`; "Konteks & Memori" added to `/settings`.
+- **Frontend (Stories 3–7):** `useWorkspace` hook + pure client-state; `EmptyState`, `ChatPanel`, `GapsScorePanel`/`GapRow`, `ArtifactPanel`/`PrdArtifact`, `WorkspaceSidebar`, `WorkspaceShell`; `/analyze` is now a flag wrapper (old page preserved byte-for-byte as `LegacyAnalyzeClient`).
+- **Owner rules enforced as tests:** no sample/example BRD in the new flow; contrast enforced (no element invisible against its background).
+- **Verification green:** tsc clean, `lint:anthropic` pass (key never client-side), **298/298 tests** (50 files), build compiles, old `/analyze` intact with flag off.
+- ⏳ **Pending:** manual logged-in smoke (paste→PRD; fintech+S3→SFTP constraint_conflict), then PR/merge. Task F10 (delete legacy path) deferred until default-on.
+
+See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]].
+
+### Earlier Session ✅ (GitHub SaaS Repo Research)
+
+- **Production SaaS reference researched** — recommended `KolbySisk/next-supabase-stripe-starter` as the best practical reference for StoryForge because it aligns with Next.js + Supabase + subscriptions + Resend + Vercel.
+- **Primary use clarified** — do not replace StoryForge with a starter; use it as a pattern library for billing schema, webhook sync, entitlement checks, account/billing UX, and launch setup.
+- **Secondary references noted** — `nextjs/saas-starter` remains the best official general SaaS reference; `vercel/nextjs-subscription-payments` is useful historically but sunset; `antoineross/Hikari` is not primary because it is work-in-progress.
+
+---
+
+## Previous Status - 2026-06-03
 
 ### Completed This Session ✅ (Living BRD Workspace — Planning)
 
@@ -268,5 +292,7 @@
 ---
 
 **Session Log:** [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
+
+**Current Session Log:** [[03-Sessions/2026-06-05-GitHub-SaaS-Repo-Research|2026-06-05: GitHub SaaS Repo Research]] — **LATEST**
 
 **Auto-updated by Claude**
