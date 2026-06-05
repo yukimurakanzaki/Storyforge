@@ -28,7 +28,11 @@ export async function PATCH(request: NextRequest) {
   const score = computeWorkspaceScore(gaps)
   const next = { ...state, gaps, readinessScore: score, readinessLabel: getScoreLabel(score), lastActiveAt: now }
 
-  const { error } = await supabase.from('analysis_results').upsert(stateToRow(next, user.id, row.project_id as string | null), { onConflict: 'session_id' })
+  const { error } = await supabase
+    .from('analysis_results')
+    .update(stateToRow(next, user.id, row.project_id as string | null))
+    .eq('id', row.id)
+    .eq('user_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ state: next })
 }

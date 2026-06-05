@@ -42,6 +42,25 @@ function sanitizeTurn(parsed: ModelTurnResponse): ModelTurnResponse {
   }
 }
 
+async function persistWorkspaceState(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  state: WorkspaceState,
+  userId: string,
+  projectId: string | null,
+  existingRowId: unknown,
+) {
+  const row = stateToRow(state, userId, projectId)
+  if (typeof existingRowId === 'string' && existingRowId) {
+    return supabase
+      .from('analysis_results')
+      .update(row)
+      .eq('id', existingRowId)
+      .eq('user_id', userId)
+  }
+
+  return supabase.from('analysis_results').insert(row)
+}
+
 function newState(sessionId: string, title: string, brdText: string): WorkspaceState {
   return {
     sessionId, title, brdText, gaps: [], readinessScore: 100, readinessLabel: getScoreLabel(100),
@@ -121,9 +140,8 @@ export async function POST(request: NextRequest) {
       state = applyTurn(state, parsed, now)
       state = { ...state, messages: [...state.messages, { role: 'assistant', content: parsed.assistantMessage }] }
 
-      const { error: upErr } = await supabase
-        .from('analysis_results').upsert(stateToRow(state, user.id, projectId), { onConflict: 'session_id' })
-      if (upErr) { console.error('[api/workspace] upsert failed:', upErr); streamError('Gagal menyimpan. Coba lagi.'); return }
+      const { error: persistErr } = await persistWorkspaceState(supabase, state, user.id, projectId, row?.id)
+      if (persistErr) { console.error('[api/workspace] persist failed:', persistErr); streamError('Gagal menyimpan. Coba lagi.'); return }
 
       enqueue(sseEvent('done', {
         assistantMessage: parsed.assistantMessage,
