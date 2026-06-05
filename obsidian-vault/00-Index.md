@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-06-02 (WIB)
-**Status:** Pre-MVP - StoryForge V2 PRD refinement implemented; enhanced PM analysis flow verified locally
+**Last Updated:** 2026-06-03 (WIB)
+**Status:** Pre-MVP — Living BRD Workspace epic + Phase 1 plans (BE + FE) written and self-reviewed; ready to execute
 
 ---
 
@@ -20,7 +20,9 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]] - **LATEST**
+- [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
+- [[03-Sessions/2026-06-03-Done-State-Completion-UX|2026-06-03: Done-State Completion UX]]
+- [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]]
 - [[03-Sessions/2026-05-27-Portfolio-Mockup-Animation-Design|2026-05-27: Portfolio Mockup Animation & Design Fixes]] — **LATEST**
 - [[03-Sessions/2026-05-27-Portfolio-Design-Audit-Fix|2026-05-27: Portfolio Design Audit & Fix]]
 - [[03-Sessions/2026-05-24-Portfolio-Deploy|2026-05-24: Portfolio Deploy to Production]]
@@ -65,15 +67,26 @@
 
 ---
 
-## Latest Status - 2026-06-02
+## Latest Status - 2026-06-03
 
-### Completed This Session ✅
+### Completed This Session ✅ (Living BRD Workspace — Planning)
 
-- StoryForge PRD refinement V2 implemented: prioritized summary, Gap Cards, Journey Map data, score breakdown, and V2 persistence.
-- Analyze flow integrated: V2 output renders inside LivingDocument as Hasil Review BRD, with RefinementChat preserved below.
-- Refinement follow-up handled: stale V2 sections are removed after chat refinement, result is marked for reanalysis, and copy output is PM-readable plain text.
-- Auth-required E2E flow aligned: authenticated analysis and unauthenticated login redirect are covered.
-- Verification green: npm run lint, npm test (39 files, 261 tests), npx tsc --noEmit, npm run build, and Playwright E2E (5 passed, 1 skipped) passed.
+- **Epic written** — [[01-Product/Epic-Living-BRD-Workspace|Living BRD Workspace]]. Revamp `/analyze` into a Claude-style living workspace: chat + persistent Gaps & Score panel + living PRD artifact, in a session that auto-compacts so it never maxes out on context. Phase 1 = Stories 1–7; Phase 2 (flowchart, search, starred, projects) = Stories 8–11.
+- **Context Layer added** (Story 2) — user profile/memory (industry, role, compliance, tech defaults, standing instructions, PRD template) read before analysis; flags contradictions as `constraint_conflict` gaps (e.g. SFTP vs S3, OJK).
+- **Two Phase-1 implementation plans written + self-reviewed:**
+  - Backend: `docs/superpowers/plans/2026-06-03-living-brd-workspace-phase1.md` (Tasks 0–15, full TDD).
+  - Frontend: `docs/superpowers/plans/2026-06-03-living-brd-workspace-phase1-frontend.md` (Tasks F1–F10).
+- **2 schema-dependency bugs caught + fixed in plan** — `brd_text NOT NULL` and the `status` CHECK constraint (now allows `'active'`).
+- **Owner requirements baked in as testable criteria** — no sample/example BRD in the new flow; contrast enforced so no button/text disappears into its background.
+- ⏳ **Not started:** any application code. Execution pending on branch `feat/living-brd-workspace`.
+
+### Previous Session ✅ (Done-State Completion UX)
+
+- **Done-state completion UX** — fixed the dead-end after "Generate User Stories": in-chat banner, pinned footer CTA, right-panel summary card. PR #14 open on `feat/done-state-completion-ux`.
+- Auth-aware CTA: authenticated users see "Lihat Dashboard"; anonymous users see "Daftar untuk simpan riwayat" → `/signup?redirect=/dashboard` (converts the success moment).
+- Single primary CTA enforced — only one "Analisis Baru" button on screen at a time (footer owns it).
+- Zero-story edge case handled — no false celebration if generation fails.
+- Verification green: lint 0 errors, 261/261 tests pass, build compiles, browser DOM proof both auth states.
 
 - ✅ **Animated phone mockups** — 3-phone floating group on BAF + Danamas case study pages (kanbanbot.online style). Live on prod.
 - ✅ **Service cards → /contact** — PM Consulting + PM Portfolio Building cards now link to contact page with "Get in touch →" CTA
@@ -254,6 +267,6 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]] - **LATEST**
+**Session Log:** [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
 
 **Auto-updated by Claude**
