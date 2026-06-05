@@ -10,7 +10,7 @@ function renderGaps(state: WorkspaceState): string {
 
 /**
  * System prompt for one orchestrator turn. The model MUST return ONE JSON object
- * matching ModelTurnResponse — no markdown, no code fence.
+ * matching ModelTurnResponse: no markdown, no code fence.
  * `contextBlock` is prepended verbatim (empty in Story 1, filled by Story 2).
  */
 export function buildWorkspaceSystemPrompt({ contextBlock, state }: { contextBlock: string; state: WorkspaceState }): string {
@@ -26,14 +26,20 @@ ${renderGaps(state)}
 - PRD: ${state.prd ? `sudah ada, versi ${state.prd.version}` : 'belum dibuat'}
 
 TUGAS: klasifikasikan pesan terakhir user ke SATU intent, lalu lakukan aksinya:
-1. "new_or_expanded_requirement" — user menempel/menambah requirement. Temukan gap baru (maks 6 per turn). JANGAN bertanya hal yang sudah dijawab oleh KONTEKS di atas. Jika requirement BERTENTANGAN dengan konteks (mis. pakai SFTP padahal default S3, atau melanggar regulasi yang disebut), buat gap dengan category "constraint_conflict" dan isi conflictsWith.
-2. "answer_pending_question" — pesan user menjawab satu/lebih gap terbuka. Isi resolvedGapIds (pakai id dari daftar di atas) + gapAnswers. Jika jawaban ambigu/parsial, JANGAN tutup; ajukan follow-up sebagai newGaps.
-3. "command" — user minta menulis/memperbarui/menfinalkan PRD ("tulis PRD", "update PRD", "finalkan"). Hasilkan field prd: markdown PRD lengkap (epic + user story INVEST + acceptance criteria Gherkin). Jika ada "TEMPLATE PRD" di KONTEKS, IKUTI strukturnya; jika tidak, pakai format default. Pertanyaan yang masih terbuka MASUK ke prd.openQuestions; gap out_of_scope MASUK ke prd.assumptions.
-4. "general_chat" — selain di atas. Balas saja; jangan ubah gap/PRD.
+1. "new_or_expanded_requirement" - user menempel/menambah requirement, walaupun hanya satu kalimat konkret seperti "Sistem perlu fitur upload dokumen PDF oleh nasabah." Untuk requirement baru, WAJIB cari gap readiness baru (maks 6 per turn) kecuali requirement benar-benar sudah lengkap dan semua pertanyaan penting sudah terjawab. JANGAN kembalikan newGaps kosong untuk requirement yang masih punya detail produk/teknis/edge-case yang belum jelas. JANGAN bertanya hal yang sudah dijawab oleh KONTEKS di atas. Jika requirement BERTENTANGAN dengan konteks (mis. pakai SFTP padahal default S3, atau melanggar regulasi yang disebut), buat gap dengan category "constraint_conflict" dan isi conflictsWith.
+2. "answer_pending_question" - pesan user menjawab satu/lebih gap terbuka. Isi resolvedGapIds (pakai id dari daftar di atas) + gapAnswers. Jika jawaban ambigu/parsial, JANGAN tutup; ajukan follow-up sebagai newGaps.
+3. "command" - user minta menulis/memperbarui/menfinalkan PRD ("tulis PRD", "update PRD", "finalkan"). Hasilkan field prd: markdown PRD lengkap (epic + user story INVEST + acceptance criteria Gherkin). Jika ada "TEMPLATE PRD" di KONTEKS, IKUTI strukturnya; jika tidak, pakai format default. Pertanyaan yang masih terbuka MASUK ke prd.openQuestions; gap out_of_scope MASUK ke prd.assumptions.
+4. "general_chat" - selain di atas. Balas saja; jangan ubah gap/PRD.
 
 assistantMessage WAJIB: balasan natural ke user yang menjelaskan apa yang kamu lakukan (gap baru, gap yang ditutup, atau jawaban langsung).
 
-KEMBALIKAN HANYA JSON valid (tanpa markdown, tanpa code block) dengan bentuk PERSIS:
+ATURAN JSON KETAT:
+- Karakter pertama output harus "{" dan karakter terakhir harus "}".
+- Jangan tulis markdown, code fence, heading, penjelasan sebelum JSON, atau komentar setelah JSON.
+- Semua key wajib ada. Jika tidak ada isi, pakai [] / {} / null sesuai contoh.
+- severity hanya boleh "high", "medium", atau "low".
+
+KEMBALIKAN HANYA JSON valid dengan bentuk PERSIS:
 {"intent":"...","assistantMessage":"...","newGaps":[{"category":"functional","description":"...","severity":"high","question":"...","source":"brd","conflictsWith":null}],"resolvedGapIds":[],"gapAnswers":{},"outOfScopeGapIds":[],"prd":null}`
 }
 

@@ -22,6 +22,42 @@ function stripFence(t: string): string {
   return t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 }
 
+function extractFirstJsonObject(text: string): string {
+  const stripped = stripFence(text)
+  if (stripped.startsWith('{')) return stripped
+
+  const start = stripped.indexOf('{')
+  if (start === -1) return stripped
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < stripped.length; i += 1) {
+    const char = stripped[i]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (char === '\\') {
+      escaped = true
+      continue
+    }
+    if (char === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+    if (char === '{') depth += 1
+    if (char === '}') {
+      depth -= 1
+      if (depth === 0) return stripped.slice(start, i + 1)
+    }
+  }
+
+  return stripped
+}
+
 /**
  * Sanitize untrusted LLM output before applying it to state.
  * 1. Clamp gap severity to valid enum values (prevents NaN in score).
@@ -125,9 +161,12 @@ export async function POST(request: NextRequest) {
         messages: payload.messages,
       })
       const raw = completion.content.map((c) => (c.type === 'text' ? c.text : '')).join('')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[api/workspace] raw model response:', raw)
+      }
 
       let parsed: ModelTurnResponse
-      try { parsed = JSON.parse(stripFence(raw)) } catch {
+      try { parsed = JSON.parse(extractFirstJsonObject(raw)) } catch {
         console.error('[api/workspace] JSON parse failed:', raw.slice(0, 300))
         streamError('Terjadi kesalahan. Coba lagi.'); return
       }
