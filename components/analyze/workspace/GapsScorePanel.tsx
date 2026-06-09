@@ -4,10 +4,11 @@ import type { WorkspaceGap } from '@/types/workspace'
 import { partitionGaps, scoreColor } from '@/lib/workspace/client-state'
 import { GapRow } from './GapRow'
 
-export function GapsScorePanel({ gaps, score, label, onAnswer, onDismiss }: {
+export function GapsScorePanel({ gaps, score, label, isAnalyzing = false, onAnswer, onDismiss }: {
   gaps: WorkspaceGap[]
   score: number
   label: string
+  isAnalyzing?: boolean
   onAnswer: (id: string, answer: string) => void
   onDismiss: (id: string) => void
 }) {
@@ -17,13 +18,26 @@ export function GapsScorePanel({ gaps, score, label, onAnswer, onDismiss }: {
       <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-gray-500">Readiness Score</p>
-          <p className="text-sm text-gray-700">{label}</p>
+          <p className="text-sm text-gray-700">{isAnalyzing ? 'Score akan diperbarui setelah analisis selesai.' : label}</p>
         </div>
-        <div className={`text-3xl font-bold ${scoreColor(score)}`}>{score}</div>
+        {isAnalyzing ? (
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+            <span className="inline-flex items-center gap-1" aria-hidden="true">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500 [animation-delay:120ms]" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500 [animation-delay:240ms]" />
+            </span>
+            <span>Menganalisis</span>
+          </div>
+        ) : (
+          <div className={`text-3xl font-bold ${scoreColor(score)}`}>{score}</div>
+        )}
       </div>
 
       {open.length === 0 && resolved.length === 0 && (
-        <p className="text-sm text-gray-500">Belum ada gap. Tempel requirement di chat untuk mulai.</p>
+        <p className="text-sm text-gray-500">
+          {isAnalyzing ? 'StoryForge sedang membaca BRD dan mencari gap.' : 'Belum ada gap. Tempel requirement di chat untuk mulai.'}
+        </p>
       )}
 
       {open.length > 0 && (

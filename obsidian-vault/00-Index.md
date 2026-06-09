@@ -20,6 +20,7 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-06-05-Living-BRD-Workspace-Debug-Tests|2026-06-05: Living BRD Workspace Debug + Integration Tests]] - **LATEST**
 - [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|2026-06-05: Living BRD Workspace — Phase 1 BUILD]] — **LATEST**
 - [[03-Sessions/2026-06-05-Web-App-Design-Guidance|2026-06-05: Web App Design Guidance]]
 - [[03-Sessions/2026-06-05-GitHub-SaaS-Repo-Research|2026-06-05: GitHub SaaS Repo Research]] — **LATEST**
@@ -71,6 +72,17 @@
 ---
 
 ## Latest Status - 2026-06-05
+
+### Completed This Session - Living BRD Workspace Debug + Integration Tests
+
+- **Status update:** Living BRD Workspace Phase 1 remains code-complete on branch `feat/living-brd-workspace`; workspace debug fixes and integration tests are now committed. Logged-in manual smoke is still pending.
+- **Fixed workspace persistence 404:** replaced `analysis_results` partial-index `upsert(... onConflict: session_id)` with explicit `INSERT` for new sessions and `UPDATE ... eq(id) ... eq(user_id)` for existing sessions. Also updated `PATCH /api/workspace/gap`.
+- **Improved model JSON handling:** added local-only raw response logging, robust first-JSON-object extraction, and stricter prompt instructions so concrete one-sentence requirements produce `new_or_expanded_requirement` gaps instead of empty/general-chat turns.
+- **Added `/api/workspace` integration tests:** covers insert/update persistence, new gaps lowering score, parse failure no-persist behavior, severity clamping, and unauthenticated 401.
+- **Added Codex-style loading UX:** while Claude is responding, Gaps & Score now shows `Menganalisis` with a subtle pulse and hides the misleading numeric `100`; chat shows a quiet inline pending indicator.
+- **Commits created:** `3b1ab67`, `8290b15`, `7ca2e1e`.
+- **Verification green:** `npm test` 306/306, `npx tsc --noEmit` exit 0, `npm run lint:anthropic` pass.
+- **Pending:** exact logged-in browser-console smoke POST and live raw model inspection in an authenticated local session.
 
 ### Completed This Session ✅ (Living BRD Workspace — Phase 1 BUILD)
 

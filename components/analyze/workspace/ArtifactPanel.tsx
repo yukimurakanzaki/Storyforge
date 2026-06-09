@@ -17,7 +17,7 @@ export function ArtifactPanel({ ws }: { ws: UseWorkspace }) {
       </div>
       <div className="flex-1 overflow-y-auto">
         {ws.activeTab === 'gaps'
-          ? <GapsScorePanel gaps={ws.state.gaps} score={ws.state.readinessScore} label={ws.state.readinessLabel} onAnswer={ws.answerGap} onDismiss={ws.dismissGap} />
+          ? <GapsScorePanel gaps={ws.state.gaps} score={ws.state.readinessScore} label={ws.state.readinessLabel} isAnalyzing={ws.isSending} onAnswer={ws.answerGap} onDismiss={ws.dismissGap} />
           : <PrdArtifact prd={ws.state.prd} onUpdate={ws.generatePrd} />}
       </div>
     </div>

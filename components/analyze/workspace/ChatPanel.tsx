@@ -29,7 +29,16 @@ export function ChatPanel({ messages, isSending, lastResolved, onSend }: {
               {lastResolved.map((q, i) => <div key={i}>✓ Menutup pertanyaan: {q}</div>)}
             </div>
           )}
-          {isSending && <div className="self-start text-xs text-gray-400">StoryForge sedang berpikir...</div>}
+          {isSending && (
+            <div className="self-start flex max-w-[90%] items-center gap-2 rounded-2xl bg-gray-100 px-4 py-2 text-xs text-gray-600">
+              <span className="inline-flex items-center gap-1" aria-hidden="true">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500 [animation-delay:120ms]" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-500 [animation-delay:240ms]" />
+              </span>
+              <span>StoryForge sedang menganalisis</span>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex-shrink-0 border-t border-gray-200 bg-white px-6 py-3">
