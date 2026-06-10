@@ -881,6 +881,8 @@ export default function AnalyzePage() {
                   handleFinalize()
                 }}
                 canSubmitFeedback={isAuthenticated && !!result?.id}
+                isAuthenticated={isAuthenticated}
+                onNewSession={handleNewSession}
               />
             </div>
           )}
