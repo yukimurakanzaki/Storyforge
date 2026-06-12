@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { sanitizeAuthRedirectPath } from '@/lib/auth/redirect'
 import { validatePassword } from '@/lib/auth/password'
 import { PasswordStrengthChecklist, isPasswordValid } from '@/components/PasswordStrengthChecklist'
+import { AuthErrorFallback } from '@/components/AuthErrorFallback'
 
 type SignupStatus = 'idle' | 'loading' | 'sent' | 'error'
 
@@ -19,6 +20,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [emailError, setEmailError] = useState('')
+  const [oauthUnavailable, setOauthUnavailable] = useState(false)
+  const [emailAuthUnavailable, setEmailAuthUnavailable] = useState(false)
+
+  const allServicesUnavailable = oauthUnavailable && emailAuthUnavailable
 
   function getRedirectPath() {
     const params = new URLSearchParams(window.location.search)
@@ -28,15 +33,21 @@ export default function SignupPage() {
   async function handleGoogleSignup() {
     setOauthLoading(true)
     const redirectPath = getRedirectPath()
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
-      },
-    })
-    if (error) {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
+        },
+      })
+      if (error) {
+        setOauthLoading(false)
+        setOauthUnavailable(true)
+      }
+    } catch {
       setOauthLoading(false)
+      setOauthUnavailable(true)
     }
   }
 
@@ -60,31 +71,45 @@ export default function SignupPage() {
 
     const redirectPath = getRedirectPath()
 
-    const supabase = createClient()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
-      },
-    })
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectPath)}`,
+        },
+      })
 
-    if (error) {
-      setStatus('error')
-      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-        setErrorMsg('Email sudah terdaftar. Silakan login atau gunakan email lain.')
-      } else {
-        setErrorMsg(error.message)
+      if (error) {
+        // Check if this is a service unavailability error (network/server issues)
+        if (error.status === 503 || error.status === 502 || error.message.includes('fetch')) {
+          setEmailAuthUnavailable(true)
+          setStatus('error')
+          setErrorMsg('Layanan pendaftaran sedang tidak tersedia.')
+          return
+        }
+
+        setStatus('error')
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          setErrorMsg('Email sudah terdaftar. Silakan login atau gunakan email lain.')
+        } else {
+          setErrorMsg(error.message)
+        }
+        return
       }
-      return
-    }
 
-    if (data.session) {
-      window.location.href = redirectPath
-      return
-    }
+      if (data.session) {
+        window.location.href = redirectPath
+        return
+      }
 
-    setStatus('sent')
+      setStatus('sent')
+    } catch {
+      setEmailAuthUnavailable(true)
+      setStatus('error')
+      setErrorMsg('Terjadi kesalahan. Coba lagi.')
+    }
   }
 
   return (
@@ -108,6 +133,15 @@ export default function SignupPage() {
             </p>
             <p className="mt-1 text-xs text-green-500">{email}</p>
           </div>
+        ) : allServicesUnavailable ? (
+          <AuthErrorFallback
+            onRetry={() => {
+              setOauthUnavailable(false)
+              setEmailAuthUnavailable(false)
+              setStatus('idle')
+              setErrorMsg('')
+            }}
+          />
         ) : (
           <>
             {/* Google OAuth Button */}
@@ -227,11 +261,6 @@ export default function SignupPage() {
           Sudah punya akun?{' '}
           <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">
             Masuk
-          </Link>
-        </p>
-        <p className="mt-3 text-center text-sm">
-          <Link href="/analyze" className="text-gray-500 hover:text-teal-600 transition-colors">
-            Lanjutkan sebagai Tamu
           </Link>
         </p>
       </div>

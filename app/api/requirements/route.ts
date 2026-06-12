@@ -2,8 +2,8 @@ import { anthropic } from '@/lib/anthropic'
 import type Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getModelConfig } from '@/lib/model-selector'
 import { AnalysisResult, ChatMessage } from '@/types'
-import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -60,23 +60,14 @@ FORMAT JSON WAJIB:
 }`
 
 export async function POST(request: NextRequest) {
-  // Auth guard: require session OR guest-mode header
-  const isGuest = request.headers.get('x-guest-mode') === '1'
-  if (isGuest) {
-    const ip = getClientIp(request)
-    const { allowed } = checkGuestRateLimit(ip)
-    if (!allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', message: 'Batas analisis tercapai. Masuk untuk melanjutkan.' },
-        { status: 429 }
-      )
-    }
-  } else {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // Auth guard: require authenticated session
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json(
+      { error: 'Unauthorized', message: 'Login diperlukan.' },
+      { status: 401 }
+    )
   }
 
   let body: unknown
@@ -121,9 +112,19 @@ export async function POST(request: NextRequest) {
 
   const userMessage = `BRD ASLI:\n${brdText}\n\nHASIL ANALISIS:\n- Readiness Score: ${typedAnalysis.readinessScore}/100\n- Gap yang ditemukan:\n${gapSummary}\n\nDISKUSI KLARIFIKASI:\n${conversationHistory}\n\nBuat User Stories lengkap berdasarkan semua konteks di atas. Sertakan generatedAt dengan timestamp sekarang dalam ISO 8601.`
 
+  // Determine AI model based on user's plan
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('user_id', user.id)
+    .single()
+
+  const plan = (sub?.plan as 'free' | 'pro') || 'free'
+  const modelConfig = getModelConfig(plan)
+
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: modelConfig.model,
       max_tokens: 8192,
       temperature: 0,
       system: SYSTEM_PROMPT,

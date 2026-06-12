@@ -1,13 +1,14 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-05-23 (WIB)
-**Status:** Pre-MVP, UI design polished (impeccable audit 22→24/40), error recovery fixed
+**Last Updated:** 2026-06-12 (WIB)
+**Status:** Pre-MVP - Living BRD Workspace Phase 1 **smoke-test PASSED** on `feat/living-brd-workspace` (one PRD-render bug found + fixed; 311/311 tests green, build clean). Ready to merge → flip flag → register domain → build payment flow. Manual payment `design.md` complete.
 
 ---
 
 ## 🚀 Quick Navigation
 
 ### Product
+- [[01-Product/Requirements-Full-v3.0|Full Requirements v3.0]] — **LATEST** consolidated PRD (2026-06-10)
 - [[01-Product/PRD-v1.5|PRD v1.5]] — Complete spec, production-ready
 - [[01-Product/North-Star-Metric|North Star Metric]] — WAA = Weekly Active Analyzers
 - [[01-Product/Compliance|Compliance Package]] — Privacy, ToS, ZDR config
@@ -20,7 +21,20 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]] — **LATEST**
+- [[03-Sessions/2026-06-12-Living-Workspace-Smoke-Test-PRD-Fix|2026-06-12: Living Workspace Smoke Test + PRD Render Fix]] - **LATEST**
+- [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]]
+- [[03-Sessions/2026-06-05-Living-BRD-Workspace-Debug-Tests|2026-06-05: Living BRD Workspace Debug + Integration Tests]] - **LATEST**
+- [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|2026-06-05: Living BRD Workspace — Phase 1 BUILD]] — **LATEST**
+- [[03-Sessions/2026-06-05-Web-App-Design-Guidance|2026-06-05: Web App Design Guidance]]
+- [[03-Sessions/2026-06-05-GitHub-SaaS-Repo-Research|2026-06-05: GitHub SaaS Repo Research]] — **LATEST**
+- [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
+- [[03-Sessions/2026-06-03-Done-State-Completion-UX|2026-06-03: Done-State Completion UX]]
+- [[03-Sessions/2026-06-02-PRD-Refinement-Enhanced-Analysis|2026-06-02: PRD Refinement Enhanced Analysis Engine]]
+- [[03-Sessions/2026-05-27-Portfolio-Mockup-Animation-Design|2026-05-27: Portfolio Mockup Animation & Design Fixes]] — **LATEST**
+- [[03-Sessions/2026-05-27-Portfolio-Design-Audit-Fix|2026-05-27: Portfolio Design Audit & Fix]]
+- [[03-Sessions/2026-05-24-Portfolio-Deploy|2026-05-24: Portfolio Deploy to Production]]
+- [[03-Sessions/2026-05-24-Portfolio-Production-Readiness|2026-05-24: Portfolio Production Readiness Audit]]
+- [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]]
 - [[03-Sessions/2026-05-21-eslint-flat-config-migration|2026-05-21: ESLint Flat Config Migration & Clean Build]]
 - [[03-Sessions/2026-05-10-password-auth-admin-beta|2026-05-10: Password Auth + Admin Beta Magic Link]]
 - [[03-Sessions/2026-05-09-awesome-wescoff-merge-conflict|2026-05-09: Awesome Wescoff Merge Conflict Resolution]]
@@ -60,9 +74,79 @@
 
 ---
 
-## ✅ Latest Status — 2026-05-23
+## Latest Status - 2026-06-10
 
-### Completed ✅
+### Completed This Session - Manual Payment Flow Trade-off Analysis
+
+- Reviewed `.kiro/specs/manual-payment-flow/requirements.md` for the beta manual bank transfer subscription flow.
+- Confirmed `.kiro/specs/manual-payment-flow/design.md` is currently empty, so the analysis used the requirements document plus PRD/API architecture context.
+- Produced a requirement-by-requirement trade-off analysis covering pricing UX, unique transfer codes, proof upload, admin verification, subscription activation, reminders, grace period, entitlement enforcement, payment records, Bahasa UI, accessibility, privacy, and operational risk.
+- Recommended manual transfer for beta, with production-grade security boundaries: private proof storage, server-side entitlement helper, admin-only verification, idempotent approval, dynamic grace-period computation, and append-only payment audit events.
+- Recommended keeping the subscription engine gateway-compatible for future Xendit migration.
+- **Pending:** convert analysis into `design.md` if the spec is ready to move from requirements to design.
+
+## Previous Status - 2026-06-05
+
+### Completed This Session - Living BRD Workspace Debug + Integration Tests
+
+- **Status update:** Living BRD Workspace Phase 1 remains code-complete on branch `feat/living-brd-workspace`; workspace debug fixes and integration tests are now committed. Logged-in manual smoke is still pending.
+- **Fixed workspace persistence 404:** replaced `analysis_results` partial-index `upsert(... onConflict: session_id)` with explicit `INSERT` for new sessions and `UPDATE ... eq(id) ... eq(user_id)` for existing sessions. Also updated `PATCH /api/workspace/gap`.
+- **Improved model JSON handling:** added local-only raw response logging, robust first-JSON-object extraction, and stricter prompt instructions so concrete one-sentence requirements produce `new_or_expanded_requirement` gaps instead of empty/general-chat turns.
+- **Added `/api/workspace` integration tests:** covers insert/update persistence, new gaps lowering score, parse failure no-persist behavior, severity clamping, and unauthenticated 401.
+- **Added Codex-style loading UX:** while Claude is responding, Gaps & Score now shows `Menganalisis` with a subtle pulse and hides the misleading numeric `100`; chat shows a quiet inline pending indicator.
+- **Commits created:** `3b1ab67`, `8290b15`, `7ca2e1e`.
+- **Verification green:** `npm test` 306/306, `npx tsc --noEmit` exit 0, `npm run lint:anthropic` pass.
+- **Pending:** exact logged-in browser-console smoke POST and live raw model inspection in an authenticated local session.
+
+### Completed This Session ✅ (Living BRD Workspace — Phase 1 BUILD)
+
+- **Phase 1 code-complete** on branch `feat/living-brd-workspace`, behind `NEXT_PUBLIC_LIVING_WORKSPACE`. Executed both plans via subagent-driven development (implementer + spec review + code-quality review per task group).
+- **Backend (Stories 1–2):** shared types + pure libs (score, reducer, compaction, store w/ legacy fallback, prompts, context-loader); migrations `010_living_workspace` + `011_user_context` applied to Supabase; orchestrator `POST /api/workspace` (one model turn, SSE, `sanitizeTurn` hardening); resume `GET`, panel `PATCH /api/workspace/gap`, `GET/PUT /api/user-context`; "Konteks & Memori" added to `/settings`.
+- **Frontend (Stories 3–7):** `useWorkspace` hook + pure client-state; `EmptyState`, `ChatPanel`, `GapsScorePanel`/`GapRow`, `ArtifactPanel`/`PrdArtifact`, `WorkspaceSidebar`, `WorkspaceShell`; `/analyze` is now a flag wrapper (old page preserved byte-for-byte as `LegacyAnalyzeClient`).
+- **Owner rules enforced as tests:** no sample/example BRD in the new flow; contrast enforced (no element invisible against its background).
+- **Verification green:** tsc clean, `lint:anthropic` pass (key never client-side), **298/298 tests** (50 files), build compiles, old `/analyze` intact with flag off.
+- ⏳ **Pending:** manual logged-in smoke (paste→PRD; fintech+S3→SFTP constraint_conflict), then PR/merge. Task F10 (delete legacy path) deferred until default-on.
+
+See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]].
+
+### Earlier Session ✅ (GitHub SaaS Repo Research)
+
+- **Production SaaS reference researched** — recommended `KolbySisk/next-supabase-stripe-starter` as the best practical reference for StoryForge because it aligns with Next.js + Supabase + subscriptions + Resend + Vercel.
+- **Primary use clarified** — do not replace StoryForge with a starter; use it as a pattern library for billing schema, webhook sync, entitlement checks, account/billing UX, and launch setup.
+- **Secondary references noted** — `nextjs/saas-starter` remains the best official general SaaS reference; `vercel/nextjs-subscription-payments` is useful historically but sunset; `antoineross/Hikari` is not primary because it is work-in-progress.
+
+---
+
+## Previous Status - 2026-06-03
+
+### Completed This Session ✅ (Living BRD Workspace — Planning)
+
+- **Epic written** — [[01-Product/Epic-Living-BRD-Workspace|Living BRD Workspace]]. Revamp `/analyze` into a Claude-style living workspace: chat + persistent Gaps & Score panel + living PRD artifact, in a session that auto-compacts so it never maxes out on context. Phase 1 = Stories 1–7; Phase 2 (flowchart, search, starred, projects) = Stories 8–11.
+- **Context Layer added** (Story 2) — user profile/memory (industry, role, compliance, tech defaults, standing instructions, PRD template) read before analysis; flags contradictions as `constraint_conflict` gaps (e.g. SFTP vs S3, OJK).
+- **Two Phase-1 implementation plans written + self-reviewed:**
+  - Backend: `docs/superpowers/plans/2026-06-03-living-brd-workspace-phase1.md` (Tasks 0–15, full TDD).
+  - Frontend: `docs/superpowers/plans/2026-06-03-living-brd-workspace-phase1-frontend.md` (Tasks F1–F10).
+- **2 schema-dependency bugs caught + fixed in plan** — `brd_text NOT NULL` and the `status` CHECK constraint (now allows `'active'`).
+- **Owner requirements baked in as testable criteria** — no sample/example BRD in the new flow; contrast enforced so no button/text disappears into its background.
+- ⏳ **Not started:** any application code. Execution pending on branch `feat/living-brd-workspace`.
+
+### Previous Session ✅ (Done-State Completion UX)
+
+- **Done-state completion UX** — fixed the dead-end after "Generate User Stories": in-chat banner, pinned footer CTA, right-panel summary card. PR #14 open on `feat/done-state-completion-ux`.
+- Auth-aware CTA: authenticated users see "Lihat Dashboard"; anonymous users see "Daftar untuk simpan riwayat" → `/signup?redirect=/dashboard` (converts the success moment).
+- Single primary CTA enforced — only one "Analisis Baru" button on screen at a time (footer owns it).
+- Zero-story edge case handled — no false celebration if generation fails.
+- Verification green: lint 0 errors, 261/261 tests pass, build compiles, browser DOM proof both auth states.
+
+- ✅ **Animated phone mockups** — 3-phone floating group on BAF + Danamas case study pages (kanbanbot.online style). Live on prod.
+- ✅ **Service cards → /contact** — PM Consulting + PM Portfolio Building cards now link to contact page with "Get in touch →" CTA
+- ✅ **Dark mode toggle fixed** — Tailwind v4 `@custom-variant dark` added so ThemeToggle actually works
+- ✅ **Light mode readability fixed** — Case study prose `@reference` pointed to global.css; text now correctly dark in light mode
+- ✅ **All pushed to GitHub + deployed** — `origin/main` tracking set up; production live and tested
+
+---
+
+### Previous Completed ✅
 
 - ✅ **Impeccable design audit + polish** — Score 22→24/40; dark theme fixed, indigo→teal, side-stripe ban, locked card wall collapsed, motion-reduce added, modal focus trap fixed
 - ✅ **Refine error recovery fixed** — User message preserved on API failure; error bubble shown in chat instead of silently deleting message
@@ -233,6 +317,8 @@
 
 ---
 
-**Session Log:** [[03-Sessions/2026-05-23-impeccable-design-polish|2026-05-23: Impeccable Design Audit & Polish]] — **LATEST**
+**Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
+
+**Current Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
 
 **Auto-updated by Claude**

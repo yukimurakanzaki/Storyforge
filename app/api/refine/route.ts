@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { sseEvent, createSSEStream } from '@/lib/sse'
+import { getModelConfig } from '@/lib/model-selector'
 import type { AnalysisResult, ChatMessage, QAAnswer } from '@/types'
-import { checkGuestRateLimit, getClientIp } from '@/lib/guest-rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -77,23 +77,14 @@ interface RefineResponse {
 }
 
 export async function POST(request: NextRequest) {
-  // Auth guard: require session OR guest-mode header
-  const isGuest = request.headers.get('x-guest-mode') === '1'
-  if (isGuest) {
-    const ip = getClientIp(request)
-    const { allowed } = checkGuestRateLimit(ip)
-    if (!allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', message: 'Batas analisis tercapai. Masuk untuk melanjutkan.' },
-        { status: 429 }
-      )
-    }
-  } else {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // Auth guard: require authenticated session
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json(
+      { error: 'Unauthorized', message: 'Login diperlukan.' },
+      { status: 401 }
+    )
   }
 
   let body: unknown
@@ -139,6 +130,16 @@ export async function POST(request: NextRequest) {
     content: m.content,
   }))
 
+  // Determine AI model based on user's plan
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('user_id', user.id)
+    .single()
+
+  const plan = (sub?.plan as 'free' | 'pro') || 'free'
+  const modelConfig = getModelConfig(plan)
+
   // --- Start SSE stream ---
   const { readable, enqueue, close, error: streamError } = createSSEStream()
 
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
     let accumulated = ''
     try {
       const stream = anthropic.messages.stream({
-        model: 'claude-haiku-4-5-20251001',
+        model: modelConfig.model,
         max_tokens: 6000,
         temperature: 0,
         system: buildSystemPrompt(brdText, typedAnalysis, qaAnswers, turnNumber),

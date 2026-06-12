@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ChatMessage, GapItem, RequirementsResult } from '@/types'
+import { isEnhancedResult } from '@/types/analysis-v2'
 
 const MAX_BRD_CHARS = 150_000
 const MAX_MESSAGES = 30
@@ -54,6 +55,11 @@ function validateClarificationQuestions(raw: unknown): string[] {
     .filter(isString)
     .slice(0, 10)
     .map((q) => q.slice(0, MAX_STRING))
+}
+
+function asJsonObjectOrNull(raw: unknown): Record<string, unknown> | unknown[] | null {
+  if (raw && typeof raw === 'object') return raw as Record<string, unknown> | unknown[]
+  return null
 }
 
 export async function POST(request: NextRequest) {
@@ -128,11 +134,24 @@ export async function POST(request: NextRequest) {
   const readinessLabel = clampString(a.readinessLabel, 100) ?? 'Perlu Klarifikasi'
   const gapList = validateGapList(a.gapList)
   const clarificationQuestions = validateClarificationQuestions(a.clarificationQuestions)
+  const enhanced = isEnhancedResult(analysis)
 
   const messages = validateMessages(b.messages)
   if (messages === null) {
     return NextResponse.json({ error: 'Invalid messages' }, { status: 400 })
   }
+
+  const v2Columns = enhanced
+    ? {
+        score_components: asJsonObjectOrNull(a.scoreComponents),
+        ringkasan_temuan: asJsonObjectOrNull(a.ringkasanTemuan),
+        gap_cards: Array.isArray(a.gapCards) ? a.gapCards : [],
+        journey_map: a.journeyMap === null ? null : asJsonObjectOrNull(a.journeyMap),
+        schema_version: 2,
+      }
+    : {
+        schema_version: 1,
+      }
 
   const { data, error } = await supabase
     .from('analysis_results')
@@ -161,6 +180,7 @@ export async function POST(request: NextRequest) {
           templates: 'empty',
           stakeholder: 'empty',
         },
+        ...v2Columns,
       },
       { onConflict: 'session_id' }
     )

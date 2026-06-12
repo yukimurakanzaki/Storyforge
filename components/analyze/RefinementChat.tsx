@@ -5,6 +5,7 @@ import { CollapsibleSection } from './CollapsibleSection'
 import { GapItem } from './GapItem'
 import { QACards } from './QACards'
 import { RequirementsPanel } from './RequirementsPanel'
+import { Watermark } from './Watermark'
 import type { AnalysisResult, ChatMessage, Phase, QAAnswer, RequirementsResult } from '@/types'
 
 const MAX_CHARS = 5000
@@ -19,6 +20,7 @@ interface RefinementChatProps {
   isRefining: boolean
   isFinalizing: boolean
   phase: Phase
+  plan?: 'free' | 'pro' | null
   onSend: (text: string) => void
   onReanalyze: () => void
   onSubmitQA: () => void
@@ -27,7 +29,9 @@ interface RefinementChatProps {
   onGenerate?: () => void
   onRequirementsRetry?: () => void
   onRequirementsRegenerate?: () => void
+  onNewSession: () => void
   canSubmitFeedback?: boolean
+  isAuthenticated?: boolean
 }
 
 function getReadinessStyle(score: number) {
@@ -55,6 +59,7 @@ interface MobilePanelProps {
   qaAnswers: RefinementChatProps['qaAnswers']
   resolvedIndices: RefinementChatProps['resolvedIndices']
   isRefining: boolean
+  plan?: 'free' | 'pro' | null
   onQAAnswerChange: RefinementChatProps['onQAAnswerChange']
   onQAOutOfScopeChange: RefinementChatProps['onQAOutOfScopeChange']
   onSubmitQA: RefinementChatProps['onSubmitQA']
@@ -68,6 +73,7 @@ function MobileAnalysisPanel({
   qaAnswers,
   resolvedIndices,
   isRefining,
+  plan,
   onQAAnswerChange,
   onQAOutOfScopeChange,
   onSubmitQA,
@@ -140,6 +146,7 @@ function MobileAnalysisPanel({
                     />
                   ))}
                 </ul>
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
 
@@ -160,6 +167,7 @@ function MobileAnalysisPanel({
                   onOutOfScopeChange={onQAOutOfScopeChange}
                   onSubmit={onSubmitQA}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
           </div>
@@ -178,6 +186,7 @@ export function RefinementChat({
   isRefining,
   isFinalizing,
   phase,
+  plan,
   onSend,
   onReanalyze,
   onSubmitQA,
@@ -186,7 +195,9 @@ export function RefinementChat({
   onGenerate,
   onRequirementsRetry,
   onRequirementsRegenerate,
+  onNewSession,
   canSubmitFeedback = false,
+  isAuthenticated = false,
 }: RefinementChatProps) {
   const [input, setInput] = useState('')
   const [qaVersion, setQaVersion] = useState(0)
@@ -254,6 +265,11 @@ export function RefinementChat({
     return qa && (qa.answer.trim().length > 0 || qa.isOutOfScope) && !resolvedSet.has(i)
   }) ?? false
   const readinessStyle = result ? getReadinessStyle(result.readinessScore) : null
+  const userStoryCount = requirements?.userStories?.length ?? 0
+  const isDone = phase === 'done'
+  const dashboardCta = isAuthenticated
+    ? { href: '/dashboard', label: 'Lihat Dashboard' }
+    : { href: '/signup?redirect=/dashboard', label: 'Daftar untuk simpan riwayat' }
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0 relative">
@@ -329,15 +345,59 @@ export function RefinementChat({
                   onRetry={onRequirementsRetry}
                   onRegenerate={onRequirementsRegenerate}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
+            )}
+
+            {/* Completion banner — celebration + next steps */}
+            {isDone && userStoryCount > 0 && (
+              <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
+                    <svg aria-hidden="true" className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-teal-900">Analisis selesai!</p>
+                    <p className="text-xs text-teal-700 mt-0.5">
+                      {userStoryCount}{' '}user stories siap. Pakai tombol &ldquo;Copy semua&rdquo; di atas untuk paste ke Claude atau Cursor.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <a
+                    href={dashboardCta.href}
+                    className="inline-block rounded-lg border border-teal-300 text-teal-700 px-4 py-2 text-xs font-semibold hover:bg-teal-100 transition-colors"
+                  >
+                    {dashboardCta.label}
+                  </a>
+                </div>
+              </div>
             )}
 
             <div className="h-2" />
           </div>
         </div>
 
-        {/* Input bar */}
-        {phase !== 'done' && (
+        {/* Input bar — replaced by a quiet footer once analysis is done */}
+        {isDone ? (
+          <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50 px-6 py-3">
+            <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
+              <p className="text-xs text-gray-400">
+                {userStoryCount > 0
+                  ? 'Analisis selesai · user stories siap digunakan'
+                  : 'Analisis selesai'}
+              </p>
+              <button
+                onClick={onNewSession}
+                className="rounded-lg bg-teal-600 text-white px-4 py-2 text-xs font-semibold hover:bg-teal-700 transition-colors cursor-pointer flex-shrink-0"
+              >
+                Analisis Baru
+              </button>
+            </div>
+          </div>
+        ) : (
           <div className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
             <div className="max-w-2xl mx-auto flex gap-3 items-end">
               <div className="flex-1">
@@ -385,7 +445,7 @@ export function RefinementChat({
       </div>
 
       {/* Mobile: floating readiness badge + bottom sheet */}
-      <MobileAnalysisPanel result={result} readinessStyle={readinessStyle} qaVersion={qaVersion} hasUnanswered={hasUnanswered} qaAnswers={qaAnswers} resolvedIndices={resolvedIndices} isRefining={isRefining} onQAAnswerChange={onQAAnswerChange} onQAOutOfScopeChange={onQAOutOfScopeChange} onSubmitQA={onSubmitQA} />
+      <MobileAnalysisPanel result={result} readinessStyle={readinessStyle} qaVersion={qaVersion} hasUnanswered={hasUnanswered} qaAnswers={qaAnswers} resolvedIndices={resolvedIndices} isRefining={isRefining} plan={plan} onQAAnswerChange={onQAAnswerChange} onQAOutOfScopeChange={onQAOutOfScopeChange} onSubmitQA={onSubmitQA} />
 
       {/* ── Right: Analysis panel ────────────────────────── */}
       {result && (
@@ -415,6 +475,7 @@ export function RefinementChat({
                     />
                   ))}
                 </ul>
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
 
@@ -435,6 +496,7 @@ export function RefinementChat({
                   onOutOfScopeChange={onQAOutOfScopeChange}
                   onSubmit={onSubmitQA}
                 />
+                {plan && <Watermark plan={plan} />}
               </CollapsibleSection>
             )}
           </div>
@@ -537,6 +599,21 @@ export function RefinementChat({
               {generateConfirm === null && canGenerate && !isReadyToGenerate && !isFinalizing && (
                 <p className="mt-1.5 text-center text-xs text-amber-600">Readiness {result?.readinessScore}/100 — hanya low gaps tersisa</p>
               )}
+            </div>
+          )}
+
+          {/* Done state: completion summary pinned at bottom */}
+          {isDone && userStoryCount > 0 && (
+            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
+              <div className="rounded-xl bg-teal-50 border border-teal-200 p-3">
+                <div className="flex items-center gap-2">
+                  <svg aria-hidden="true" className="w-4 h-4 text-teal-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-xs font-bold text-teal-800">Selesai</p>
+                </div>
+                <p className="text-xs text-teal-700 mt-1">{userStoryCount}{' '}user stories dibuat</p>
+              </div>
             </div>
           )}
         </div>

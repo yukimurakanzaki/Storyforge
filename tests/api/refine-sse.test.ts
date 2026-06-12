@@ -16,11 +16,6 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
 
-vi.mock('@/lib/guest-rate-limit', () => ({
-  checkGuestRateLimit: vi.fn(),
-  getClientIp: vi.fn().mockReturnValue('127.0.0.1'),
-}))
-
 // Anthropic mock — stream() returns an async iterable that yields nothing
 // (pre-stream tests never reach the Anthropic call)
 vi.mock('@/lib/anthropic', () => ({
@@ -34,6 +29,16 @@ vi.mock('@/lib/anthropic', () => ({
     },
   },
   Anthropic: class {},
+}))
+
+// Mock Google AI SDK and Vercel AI SDK (used for free tier, not exercised in these tests)
+vi.mock('@ai-sdk/google', () => ({
+  google: vi.fn(() => 'mock-google-model'),
+}))
+
+vi.mock('ai', () => ({
+  streamText: vi.fn(),
+  generateText: vi.fn(),
 }))
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -63,10 +68,6 @@ function makeRequest(
   })
 }
 
-function makeGuestRequest(body: unknown): NextRequest {
-  return makeRequest(body, { 'x-guest-mode': '1' })
-}
-
 function makeAuthRequest(body: unknown): NextRequest {
   return makeRequest(body)
 }
@@ -79,6 +80,13 @@ function buildSupabaseMock(user: { id: string } | null = { id: 'user-1' }) {
         error: null,
       }),
     },
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { plan: 'pro' }, error: null }),
+        }),
+      }),
+    }),
   }
 }
 
@@ -94,12 +102,9 @@ describe('/api/refine — pre-stream error paths', () => {
     vi.clearAllMocks()
     vi.resetModules()
 
-    // Default: authenticated user, rate limit allowed
+    // Default: authenticated user
     const { createClient } = await import('@/lib/supabase/server')
     vi.mocked(createClient).mockResolvedValue(buildSupabaseMock() as never)
-
-    const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-    vi.mocked(checkGuestRateLimit).mockReturnValue({ allowed: true, remaining: 9 })
   })
 
   // ─── Auth tests ─────────────────────────────────────────────────────────────
@@ -137,61 +142,6 @@ describe('/api/refine — pre-stream error paths', () => {
       const res = await POST(req)
       expect(res.status).toBe(401)
       expect(res.headers.get('Content-Type')).toContain('application/json')
-    })
-  })
-
-  // ─── Guest rate-limit tests ──────────────────────────────────────────────────
-
-  describe('guest rate-limit', () => {
-    it('returns 429 when guest rate-limit is exceeded', async () => {
-      const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-      vi.mocked(checkGuestRateLimit).mockReturnValue({ allowed: false, remaining: 0 })
-
-      const POST = await getPostHandler()
-      const req = makeGuestRequest({
-        brdText: 'Some BRD',
-        initialAnalysis: VALID_ANALYSIS,
-        messages: VALID_MESSAGES,
-      })
-
-      const res = await POST(req)
-      expect(res.status).toBe(429)
-
-      const body = await res.json()
-      expect(body.error).toBe('Rate limit exceeded')
-    })
-
-    it('returns JSON (not SSE) for 429 — Content-Type is application/json', async () => {
-      const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-      vi.mocked(checkGuestRateLimit).mockReturnValue({ allowed: false, remaining: 0 })
-
-      const POST = await getPostHandler()
-      const req = makeGuestRequest({
-        brdText: 'Some BRD',
-        initialAnalysis: VALID_ANALYSIS,
-        messages: VALID_MESSAGES,
-      })
-
-      const res = await POST(req)
-      expect(res.status).toBe(429)
-      expect(res.headers.get('Content-Type')).toContain('application/json')
-    })
-
-    it('allows guest request when rate-limit is not exceeded', async () => {
-      const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-      vi.mocked(checkGuestRateLimit).mockReturnValue({ allowed: true, remaining: 5 })
-
-      const POST = await getPostHandler()
-      const req = makeGuestRequest({
-        brdText: 'Some BRD',
-        initialAnalysis: VALID_ANALYSIS,
-        messages: VALID_MESSAGES,
-      })
-
-      const res = await POST(req)
-      // Should not be 429 or 401 — stream starts (200 with SSE)
-      expect(res.status).not.toBe(429)
-      expect(res.status).not.toBe(401)
     })
   })
 
@@ -363,22 +313,6 @@ describe('/api/refine — pre-stream error paths', () => {
       const res = await POST(req)
       expect(res.status).toBe(200)
       expect(res.headers.get('Cache-Control')).toBe('no-cache')
-    })
-
-    it('returns 200 SSE for valid guest request within rate limit', async () => {
-      const { checkGuestRateLimit } = await import('@/lib/guest-rate-limit')
-      vi.mocked(checkGuestRateLimit).mockReturnValue({ allowed: true, remaining: 8 })
-
-      const POST = await getPostHandler()
-      const req = makeGuestRequest({
-        brdText: 'Valid BRD text',
-        initialAnalysis: VALID_ANALYSIS,
-        messages: VALID_MESSAGES,
-      })
-
-      const res = await POST(req)
-      expect(res.status).toBe(200)
-      expect(res.headers.get('Content-Type')).toBe('text/event-stream')
     })
   })
 })

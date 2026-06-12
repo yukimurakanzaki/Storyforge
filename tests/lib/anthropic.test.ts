@@ -31,6 +31,7 @@ describe('Property 1: Bug Condition — ZDR Header Missing from Anthropic Client
     vi.resetModules()
     mockAnthropicConstructor.mockClear()
     process.env.ANTHROPIC_API_KEY = 'test-key'
+    delete process.env.ANTHROPIC_ZDR_ENABLED
   })
 
   /**
@@ -39,7 +40,8 @@ describe('Property 1: Bug Condition — ZDR Header Missing from Anthropic Client
    * Scoped PBT Approach: The bug is deterministic — any `new Anthropic()` call
    * without `defaultHeaders['anthropic-beta'] = 'zdr-2025-01-01'` is a bug condition.
    */
-  it('shared anthropic client is constructed with ZDR defaultHeaders', async () => {
+  it('shared anthropic client is constructed with ZDR defaultHeaders when enabled', async () => {
+    process.env.ANTHROPIC_ZDR_ENABLED = 'true'
     // This import will FAIL on unfixed code because lib/anthropic.ts does not exist
     const { anthropic } = await import('@/lib/anthropic')
 
@@ -55,6 +57,17 @@ describe('Property 1: Bug Condition — ZDR Header Missing from Anthropic Client
       'anthropic-beta',
       'zdr-2025-01-01'
     )
+  })
+
+  it('shared anthropic client omits ZDR defaultHeaders when not enabled', async () => {
+    const { anthropic } = await import('@/lib/anthropic')
+
+    expect(anthropic).toBeDefined()
+    expect(mockAnthropicConstructor).toHaveBeenCalledTimes(1)
+
+    const constructorConfig = mockAnthropicConstructor.mock.calls[0][0]
+    expect(constructorConfig).toHaveProperty('defaultHeaders')
+    expect(constructorConfig.defaultHeaders).not.toHaveProperty('anthropic-beta')
   })
 
   it('shared anthropic client uses ANTHROPIC_API_KEY from environment', async () => {
