@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
 **Last Updated:** 2026-06-12 (WIB)
-**Status:** Pre-MVP - Living BRD Workspace **MERGED to `main`** (smoke-tested, flag removed, legacy client deleted). Next: register `storyforge.id` domain → build manual payment flow Phase A.
+**Status:** Pre-MVP - Living BRD Workspace **LIVE on `main` + deployed to Vercel** (smoke-tested, flag removed, legacy client deleted, 311/311 tests). Next: register `storyforge.id` → build manual payment flow Phase A.
 
 ---
 
@@ -21,7 +21,8 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
-- [[03-Sessions/2026-06-12-Living-Workspace-Smoke-Test-PRD-Fix|2026-06-12: Living Workspace Smoke Test + PRD Render Fix]] - **LATEST**
+- [[03-Sessions/2026-06-12-Merge-and-Deploy|2026-06-12: Merge + Deploy to Vercel]] — **LATEST**
+- [[03-Sessions/2026-06-12-Living-Workspace-Smoke-Test-PRD-Fix|2026-06-12: Living Workspace Smoke Test + PRD Render Fix]]
 - [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]]
 - [[03-Sessions/2026-06-05-Living-BRD-Workspace-Debug-Tests|2026-06-05: Living BRD Workspace Debug + Integration Tests]] - **LATEST**
 - [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|2026-06-05: Living BRD Workspace — Phase 1 BUILD]] — **LATEST**
