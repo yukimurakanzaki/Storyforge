@@ -1,7 +1,7 @@
 # 📋 StoryForge Project Index
 
 **Last Updated:** 2026-06-12 (WIB)
-**Status:** Pre-MVP - Living BRD Workspace Phase 1 **smoke-test PASSED** on `feat/living-brd-workspace` (one PRD-render bug found + fixed; 311/311 tests green, build clean). Ready to merge → flip flag → register domain → build payment flow. Manual payment `design.md` complete.
+**Status:** Pre-MVP - Living BRD Workspace **MERGED to `main`** (smoke-tested, flag removed, legacy client deleted). Next: register `storyforge.id` domain → build manual payment flow Phase A.
 
 ---
 
