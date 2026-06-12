@@ -2,6 +2,7 @@
 import { randomUUID } from 'crypto'
 import { computeWorkspaceScore } from './workspace-score'
 import { getScoreLabel } from './score-utils'
+import { normalizePrd } from './normalize-prd'
 import type { WorkspaceState, ModelTurnResponse, WorkspaceGap } from '@/types/workspace'
 
 /** Pure reducer: apply one model turn to the workspace state. Never mutates inputs. */
@@ -36,11 +37,15 @@ export function applyTurn(state: WorkspaceState, res: ModelTurnResponse, now: st
     })
   }
 
-  const prd = res.prd
+  // The model's `prd` field can drift from the contract (objects instead of
+  // strings, structured epics instead of `markdown`). normalizePrd coerces any
+  // shape into { markdown, openQuestions[], assumptions[] } so the UI never crashes.
+  const normalized = normalizePrd(res.prd)
+  const prd = normalized
     ? {
-        markdown: res.prd.markdown,
-        openQuestions: res.prd.openQuestions,
-        assumptions: res.prd.assumptions,
+        markdown: normalized.markdown,
+        openQuestions: normalized.openQuestions,
+        assumptions: normalized.assumptions,
         version: (state.prd?.version ?? 0) + 1,
         generatedAt: now,
       }

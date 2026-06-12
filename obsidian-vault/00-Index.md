@@ -1,13 +1,14 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-06-05 (WIB)
-**Status:** Pre-MVP — Living BRD Workspace **Phase 1 code-complete** (backend Stories 1–2 + frontend Stories 3–7) on branch `feat/living-brd-workspace`, behind `NEXT_PUBLIC_LIVING_WORKSPACE`; manual smoke + merge pending
+**Last Updated:** 2026-06-12 (WIB)
+**Status:** Pre-MVP - Living BRD Workspace Phase 1 **smoke-test PASSED** on `feat/living-brd-workspace` (one PRD-render bug found + fixed; 311/311 tests green, build clean). Ready to merge → flip flag → register domain → build payment flow. Manual payment `design.md` complete.
 
 ---
 
 ## 🚀 Quick Navigation
 
 ### Product
+- [[01-Product/Requirements-Full-v3.0|Full Requirements v3.0]] — **LATEST** consolidated PRD (2026-06-10)
 - [[01-Product/PRD-v1.5|PRD v1.5]] — Complete spec, production-ready
 - [[01-Product/North-Star-Metric|North Star Metric]] — WAA = Weekly Active Analyzers
 - [[01-Product/Compliance|Compliance Package]] — Privacy, ToS, ZDR config
@@ -20,6 +21,8 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-06-12-Living-Workspace-Smoke-Test-PRD-Fix|2026-06-12: Living Workspace Smoke Test + PRD Render Fix]] - **LATEST**
+- [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]]
 - [[03-Sessions/2026-06-05-Living-BRD-Workspace-Debug-Tests|2026-06-05: Living BRD Workspace Debug + Integration Tests]] - **LATEST**
 - [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|2026-06-05: Living BRD Workspace — Phase 1 BUILD]] — **LATEST**
 - [[03-Sessions/2026-06-05-Web-App-Design-Guidance|2026-06-05: Web App Design Guidance]]
@@ -71,7 +74,18 @@
 
 ---
 
-## Latest Status - 2026-06-05
+## Latest Status - 2026-06-10
+
+### Completed This Session - Manual Payment Flow Trade-off Analysis
+
+- Reviewed `.kiro/specs/manual-payment-flow/requirements.md` for the beta manual bank transfer subscription flow.
+- Confirmed `.kiro/specs/manual-payment-flow/design.md` is currently empty, so the analysis used the requirements document plus PRD/API architecture context.
+- Produced a requirement-by-requirement trade-off analysis covering pricing UX, unique transfer codes, proof upload, admin verification, subscription activation, reminders, grace period, entitlement enforcement, payment records, Bahasa UI, accessibility, privacy, and operational risk.
+- Recommended manual transfer for beta, with production-grade security boundaries: private proof storage, server-side entitlement helper, admin-only verification, idempotent approval, dynamic grace-period computation, and append-only payment audit events.
+- Recommended keeping the subscription engine gateway-compatible for future Xendit migration.
+- **Pending:** convert analysis into `design.md` if the spec is ready to move from requirements to design.
+
+## Previous Status - 2026-06-05
 
 ### Completed This Session - Living BRD Workspace Debug + Integration Tests
 
@@ -303,8 +317,8 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 ---
 
-**Session Log:** [[03-Sessions/2026-06-03-Living-BRD-Workspace-Planning|2026-06-03: Living BRD Workspace — Epic & Phase 1 Plans]] — **LATEST**
+**Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
 
-**Current Session Log:** [[03-Sessions/2026-06-05-GitHub-SaaS-Repo-Research|2026-06-05: GitHub SaaS Repo Research]] — **LATEST**
+**Current Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
 
 **Auto-updated by Claude**
