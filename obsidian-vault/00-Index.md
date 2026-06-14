@@ -1,13 +1,14 @@
 # 📋 StoryForge Project Index
 
 **Last Updated:** 2026-06-12 (WIB)
-**Status:** Pre-MVP - Living BRD Workspace **LIVE on `main` + deployed to Vercel** (smoke-tested, flag removed, legacy client deleted, 311/311 tests). Next: register `storyforge.id` → build manual payment flow Phase A.
+**Status:** Pre-MVP - Living BRD Workspace **LIVE on `main` + deployed to Vercel**. Production Google OAuth is blocked pending Supabase URL Configuration correction and retest. Next: fix OAuth allow list → register `storyforge.id` → build manual payment flow Phase A.
 
 ---
 
 ## 🚀 Quick Navigation
 
 ### Product
+- [[01-Product/PRD-v3.0-Launch-Readiness-Audit|Launch Readiness Audit]] — **NEW** evidence-based audit (58/100); flags workspace enforcement/metrics gap
 - [[01-Product/Requirements-Full-v3.0|Full Requirements v3.0]] — **LATEST** consolidated PRD (2026-06-10)
 - [[01-Product/PRD-v1.5|PRD v1.5]] — Complete spec, production-ready
 - [[01-Product/North-Star-Metric|North Star Metric]] — WAA = Weekly Active Analyzers
@@ -21,6 +22,8 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] — **LATEST**
+- [[03-Sessions/2026-06-12-Production-Google-OAuth-Debug|2026-06-12: Production Google OAuth Debug]]
 - [[03-Sessions/2026-06-12-Merge-and-Deploy|2026-06-12: Merge + Deploy to Vercel]] — **LATEST**
 - [[03-Sessions/2026-06-12-Living-Workspace-Smoke-Test-PRD-Fix|2026-06-12: Living Workspace Smoke Test + PRD Render Fix]]
 - [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]]
@@ -247,17 +250,19 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 ---
 
-## 💰 Unit Economics (Locked)
+## 💰 Unit Economics (Locked — corrected 2026-06-14 to match PRD v3.0 OQ-1)
 
 | Item | Value |
 |---|---|
-| Revenue per user/mo | Rp 199.000 |
+| Revenue per user/mo | Rp 149.000 (founding beta; 199k post-launch) |
 | API cost (50 analyses) | Rp 60.000 |
 | Infra (Supabase + Vercel) | Rp 15.000 |
-| Payment fee | Rp 8.500 |
-| **Net margin** | **Rp 115.500 (58%)** |
+| Payment fee | Rp 0 (manual bank transfer) |
+| **Net margin** | **≈ Rp 109.000 (73%)** |
 | Break-even users | 5 |
-| Target Rp 100jt/year | 84 users |
+| Target Rp 100jt/year | ≈ 42 Pro users |
+
+> ⚠️ Previously listed Rp 199k / 58% / 84 users — that predated the 2026-06-11 pricing decision (OQ-1). PRD v3.0 is source of truth.
 
 ---
 
@@ -318,8 +323,8 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 ---
 
-**Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
+**Session Log:** [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] - **LATEST**
 
-**Current Session Log:** [[03-Sessions/2026-06-10-manual-payment-flow-tradeoff-analysis|2026-06-10: Manual Payment Flow Trade-off Analysis]] - **LATEST**
+**Current Session Log:** [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] - **LATEST**
 
 **Auto-updated by Claude**
