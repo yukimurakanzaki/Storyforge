@@ -24,4 +24,12 @@ describe('PrdArtifact', () => {
     expect(html).toContain('text-white')
     expect(html.toLowerCase()).toContain('tulis prd')
   })
+  it('shows the free-tier watermark (OQ-6 copy) on generated PRD output', () => {
+    const html = renderToStaticMarkup(createElement(PrdArtifact, { prd, plan: 'free', onUpdate: () => {} }))
+    expect(html).toContain('Dibuat dengan StoryForge.id (Gratis)')
+  })
+  it('hides the watermark for pro users', () => {
+    const html = renderToStaticMarkup(createElement(PrdArtifact, { prd, plan: 'pro', onUpdate: () => {} }))
+    expect(html).not.toContain('Dibuat dengan StoryForge.id')
+  })
 })

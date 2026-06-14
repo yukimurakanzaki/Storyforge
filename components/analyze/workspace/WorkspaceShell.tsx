@@ -5,7 +5,7 @@ import { ChatPanel } from './ChatPanel'
 import { EmptyState } from './EmptyState'
 import { ArtifactPanel } from './ArtifactPanel'
 
-export function WorkspaceShell() {
+export function WorkspaceShell({ plan = 'free' }: { plan?: 'free' | 'pro' }) {
   const ws = useWorkspace()
   const hasSession = !!ws.state && ws.state.messages.length > 0
   return (
@@ -22,7 +22,7 @@ export function WorkspaceShell() {
         </section>
         {hasSession && (
           <aside className="hidden w-[42%] max-w-xl flex-shrink-0 flex-col overflow-y-auto bg-gray-50 lg:flex">
-            <ArtifactPanel ws={ws} />
+            <ArtifactPanel ws={ws} plan={plan} />
           </aside>
         )}
       </main>

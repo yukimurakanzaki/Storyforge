@@ -4,6 +4,10 @@ export const MAX_WORDS_FREE = 5000
 export const MAX_WORDS_PRO = 10000
 export const SESSION_TIMEOUT_MS = 45000
 
+// Quiet free-tier watermark footer line (decision OQ-6, PRD v3.0). One source of
+// truth so on-screen output and copied/exported text always match.
+export const FREE_WATERMARK = '— Dibuat dengan StoryForge.id (Gratis) · storyforge.id'
+
 export const READINESS_LABELS: Record<number, { label: string; color: string }> = {
   80: { label: 'Siap', color: 'green' },
   50: { label: 'Perlu Klarifikasi', color: 'yellow' },

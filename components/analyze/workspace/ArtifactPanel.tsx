@@ -4,7 +4,7 @@ import type { UseWorkspace } from '@/hooks/useWorkspace'
 import { GapsScorePanel } from './GapsScorePanel'
 import { PrdArtifact } from './PrdArtifact'
 
-export function ArtifactPanel({ ws }: { ws: UseWorkspace }) {
+export function ArtifactPanel({ ws, plan = 'free' }: { ws: UseWorkspace; plan?: 'free' | 'pro' }) {
   if (!ws.state) return null
   const tabBase = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px'
   const active = 'text-teal-700 border-teal-600'
@@ -18,7 +18,7 @@ export function ArtifactPanel({ ws }: { ws: UseWorkspace }) {
       <div className="flex-1 overflow-y-auto">
         {ws.activeTab === 'gaps'
           ? <GapsScorePanel gaps={ws.state.gaps} score={ws.state.readinessScore} label={ws.state.readinessLabel} isAnalyzing={ws.isSending} onAnswer={ws.answerGap} onDismiss={ws.dismissGap} />
-          : <PrdArtifact prd={ws.state.prd} onUpdate={ws.generatePrd} />}
+          : <PrdArtifact prd={ws.state.prd} onUpdate={ws.generatePrd} plan={plan} />}
       </div>
     </div>
   )

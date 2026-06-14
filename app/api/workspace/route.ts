@@ -4,6 +4,9 @@ import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { sseEvent, createSSEStream } from '@/lib/sse'
 import { getModelConfig } from '@/lib/model-selector'
+import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
+import { withTimeout } from '@/lib/with-timeout'
+import { AI_TIMEOUT_MS } from '@/lib/analysis/constants'
 import { rowToState, stateToRow } from '@/lib/analysis/workspace-store'
 import { applyTurn } from '@/lib/analysis/workspace-reducer'
 import {
@@ -121,6 +124,7 @@ export async function POST(request: NextRequest) {
   // Load or create the living session.
   const { data: row } = await supabase
     .from('analysis_results').select('*').eq('session_id', sessionId).eq('user_id', user.id).single()
+  const isNewSession = !row
   const derivedTitle = message.split('\n')[0].replace(/^#+\s*/, '').slice(0, 60) || 'Sesi baru'
   let state: WorkspaceState = row ? rowToState(row) : newState(sessionId, derivedTitle, message)
 
@@ -128,38 +132,56 @@ export async function POST(request: NextRequest) {
   const userMsg: ChatMessage = { role: 'user', content: message }
   state = { ...state, messages: [...state.messages, userMsg] }
 
-  const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', user.id).single()
-  const plan = (sub?.plan as 'free' | 'pro') || 'free'
+  // Tier check. Billing unit: one analysis = one NEW living session. Continuing
+  // an existing session is always allowed and never consumes quota (the
+  // living-workspace promise). checkUsage also yields the plan for model config.
+  const usage = await checkUsage(supabase, user.id)
+  const plan = usage.plan
+  if (isNewSession && !usage.allowed) {
+    return NextResponse.json(
+      { error: 'Limit reached', count: usage.count, limit: usage.limit, plan },
+      { status: 429, headers: { 'X-Limit-Reached': 'true' } },
+    )
+  }
   const modelConfig = getModelConfig(plan)
+  const wordCount = message.trim().split(/\s+/).filter(Boolean).length
   const contextBlock = await loadContextLayers(supabase, user.id, projectId)
 
   const { readable, enqueue, close, error: streamError } = createSSEStream()
   const headers = new Headers({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' })
 
   ;(async () => {
+    const startTime = Date.now()
     try {
       enqueue(sseEvent('status', { message: 'Menganalisis...' }))
+
+      // Measurement: a turn has started (source of WAA / completion-rate metrics).
+      try {
+        await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
+      } catch (e) {
+        console.error('[api/workspace] log analysis_started failed:', e)
+      }
 
       // 1. Compact if the verbatim tail is too long (cheap summary call).
       if (needsCompaction(state)) {
         const slice = compactionSlice(state)
-        const sum = await anthropic.messages.create({
+        const sum = await withTimeout(anthropic.messages.create({
           model: modelConfig.model, max_tokens: 512, temperature: 0,
           messages: [{ role: 'user', content: buildSummaryPrompt(slice) }],
-        })
+        }), AI_TIMEOUT_MS)
         const summaryText = sum.content.map((c) => (c.type === 'text' ? c.text : '')).join('').trim()
         state = applyCompaction(state, summaryText)
       }
 
       // 2. Main turn.
       const payload = buildModelPayload(state, contextBlock)
-      const completion = await anthropic.messages.create({
+      const completion = await withTimeout(anthropic.messages.create({
         model: modelConfig.model,
         max_tokens: plan === 'pro' ? 8192 : 6144,
         temperature: 0,
         system: payload.system,
         messages: payload.messages,
-      })
+      }), AI_TIMEOUT_MS)
       const raw = completion.content.map((c) => (c.type === 'text' ? c.text : '')).join('')
       if (process.env.NODE_ENV !== 'production') {
         console.log('[api/workspace] raw model response:', raw)
@@ -181,6 +203,15 @@ export async function POST(request: NextRequest) {
 
       const { error: persistErr } = await persistWorkspaceState(supabase, state, user.id, projectId, row?.id)
       if (persistErr) { console.error('[api/workspace] persist failed:', persistErr); streamError('Gagal menyimpan. Coba lagi.'); return }
+
+      // Bookkeeping after a successful turn: consume quota only for a NEW session,
+      // and record completion for metrics. Wrapped so a DB hiccup can't kill `done`.
+      try {
+        if (isNewSession) await incrementUsage(supabase, user.id)
+        await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_completed', wordCount, Date.now() - startTime)
+      } catch (e) {
+        console.error('[api/workspace] post-success bookkeeping failed:', e)
+      }
 
       enqueue(sseEvent('done', {
         assistantMessage: parsed.assistantMessage,
