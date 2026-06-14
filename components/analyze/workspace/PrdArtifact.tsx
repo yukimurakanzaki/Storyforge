@@ -1,8 +1,18 @@
 // components/analyze/workspace/PrdArtifact.tsx
 'use client'
 import type { PrdDraft } from '@/types/workspace'
+import { FREE_WATERMARK } from '@/lib/constants'
 
-export function PrdArtifact({ prd, onUpdate }: { prd: PrdDraft | null; onUpdate: () => void }) {
+export function PrdArtifact({
+  prd,
+  onUpdate,
+  plan = 'free',
+}: {
+  prd: PrdDraft | null
+  onUpdate: () => void
+  // Defaults to 'free' so the watermark fails closed if a caller forgets to pass it.
+  plan?: 'free' | 'pro'
+}) {
   if (!prd) {
     return (
       <div className="flex flex-col items-center gap-3 p-8 text-center">
@@ -18,13 +28,16 @@ export function PrdArtifact({ prd, onUpdate }: { prd: PrdDraft | null; onUpdate:
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">v{prd.version}</span>
         <div className="flex gap-2">
-          <button onClick={() => navigator.clipboard.writeText(prd.markdown)}
+          <button onClick={() => navigator.clipboard.writeText(plan === 'free' ? `${prd.markdown}\n\n${FREE_WATERMARK}` : prd.markdown)}
             className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Salin</button>
           <button onClick={onUpdate}
             className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700">Perbarui PRD</button>
         </div>
       </div>
       <pre className="whitespace-pre-wrap rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900">{prd.markdown}</pre>
+      {plan === 'free' && (
+        <p className="select-none text-center text-xs text-gray-400">{FREE_WATERMARK}</p>
+      )}
       {prd.openQuestions.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Open Questions</p>
