@@ -38,6 +38,20 @@ export function isUnverifiedEmailUser(user: User): boolean {
   return true
 }
 
+/**
+ * Whether the E2E auth backdoor may be used for this request. The synthetic
+ * test user is ONLY honoured OUTSIDE production — Playwright runs against
+ * `next dev` (NODE_ENV='development') and sends `x-e2e-test: true`. In
+ * production the header is ignored entirely, closing the backdoor.
+ */
+export function shouldUseE2ETestUser(
+  headerValue: string | null,
+  hasE2ECookie: boolean,
+  nodeEnv: string | undefined = process.env.NODE_ENV
+): boolean {
+  return nodeEnv !== 'production' && headerValue === 'true' && hasE2ECookie
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -63,16 +77,10 @@ export async function updateSession(request: NextRequest) {
   )
 
   let user: User | null = null
-  const allCookies = Array.from(request.cookies.getAll())
-  const hasE2ECookie = allCookies.some(
+  const hasE2ECookie = Array.from(request.cookies.getAll()).some(
     (cookie) => cookie.name.includes('auth-token')
   )
-  if (request.headers.get('x-e2e-test') === 'true') {
-    console.log('[DEBUG MIDDLEWARE] E2E Header detected! Path:', request.nextUrl.pathname)
-    console.log('[DEBUG MIDDLEWARE] Cookies:', allCookies.map(c => `${c.name}=${c.value.substring(0, 15)}...`))
-    console.log('[DEBUG MIDDLEWARE] hasE2ECookie:', hasE2ECookie)
-  }
-  if (request.headers.get('x-e2e-test') === 'true' && hasE2ECookie) {
+  if (shouldUseE2ETestUser(request.headers.get('x-e2e-test'), hasE2ECookie)) {
     user = {
       id: 'user-123',
       email: 'user@example.com',

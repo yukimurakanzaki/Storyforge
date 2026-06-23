@@ -33,9 +33,10 @@ const mockEventInsert = vi.fn().mockResolvedValue({ error: null })
 const mockInsert = mockUsageInsert
 const mockUpdate = mockUsageUpdate
 const mockUpsert = mockUsageUpsert
+const mockServiceClient = vi.fn()
 
 function buildSupabaseMock(authenticated: boolean) {
-  return {
+  const __svcClient = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: {
@@ -85,12 +86,19 @@ function buildSupabaseMock(authenticated: boolean) {
       }
     }),
   }
+
+  mockServiceClient.mockReturnValue(__svcClient)
+  return __svcClient
 }
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: mockServiceClient,
 }))
 
 // ─── Anthropic mock ───────────────────────────────────────────────────────────

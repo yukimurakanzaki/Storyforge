@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { isUsageEnforcementEnabled } from '@/lib/flags'
 import { sseEvent, createSSEStream } from '@/lib/sse'
 import { getModelConfig } from '@/lib/model-selector'
 import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
@@ -132,12 +134,19 @@ export async function POST(request: NextRequest) {
   const userMsg: ChatMessage = { role: 'user', content: message }
   state = { ...state, messages: [...state.messages, userMsg] }
 
+  // Quota/measurement writes go through the SERVICE-ROLE client: steady-state RLS
+  // gives end users SELECT-own only on usage_counters/analysis_events, so the
+  // user-cookie client cannot (and must not) write them.
+  const svc = createServiceClient()
+
   // Tier check. Billing unit: one analysis = one NEW living session. Continuing
   // an existing session is always allowed and never consumes quota (the
   // living-workspace promise). checkUsage also yields the plan for model config.
-  const usage = await checkUsage(supabase, user.id)
+  const usage = await checkUsage(svc, user.id)
   const plan = usage.plan
-  if (isNewSession && !usage.allowed) {
+  // Enforcement (the 429 block) is gated by the kill-switch; measurement below
+  // runs regardless so counters/metrics stay accurate even in measure-only mode.
+  if (isNewSession && isUsageEnforcementEnabled() && !usage.allowed) {
     return NextResponse.json(
       { error: 'Limit reached', count: usage.count, limit: usage.limit, plan },
       { status: 429, headers: { 'X-Limit-Reached': 'true' } },
@@ -157,7 +166,7 @@ export async function POST(request: NextRequest) {
 
       // Measurement: a turn has started (source of WAA / completion-rate metrics).
       try {
-        await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
+        await logAnalysisEvent(svc, user.id, sessionId, 'analysis_started', wordCount)
       } catch (e) {
         console.error('[api/workspace] log analysis_started failed:', e)
       }
@@ -207,8 +216,8 @@ export async function POST(request: NextRequest) {
       // Bookkeeping after a successful turn: consume quota only for a NEW session,
       // and record completion for metrics. Wrapped so a DB hiccup can't kill `done`.
       try {
-        if (isNewSession) await incrementUsage(supabase, user.id)
-        await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_completed', wordCount, Date.now() - startTime)
+        if (isNewSession) await incrementUsage(svc, user.id)
+        await logAnalysisEvent(svc, user.id, sessionId, 'analysis_completed', wordCount, Date.now() - startTime)
       } catch (e) {
         console.error('[api/workspace] post-success bookkeeping failed:', e)
       }

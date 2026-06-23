@@ -20,11 +20,13 @@ import type { ModelTurnResponse } from '@/types/workspace'
 
 const mockCreate = vi.fn()
 const mockCreateClient = vi.fn()
+const mockCreateServiceClient = vi.fn()
 
 vi.mock('@/lib/anthropic', () => ({
   anthropic: { messages: { create: mockCreate } },
 }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: mockCreateClient }))
+vi.mock('@/lib/supabase/service', () => ({ createServiceClient: mockCreateServiceClient }))
 vi.mock('@/lib/analysis/context-loader', () => ({
   loadContextLayers: vi.fn().mockResolvedValue(''),
 }))
@@ -147,6 +149,8 @@ function buildSupabase(options: {
     __mocks: { analysisResultsInsert, analysisResultsUpdate, usageInsert, usageUpdate, eventsInsert },
   }
 
+  // The route writes counters/events via the service client — point it at this same mock.
+  mockCreateServiceClient.mockReturnValue(supabase)
   return supabase
 }
 

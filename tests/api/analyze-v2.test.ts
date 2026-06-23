@@ -30,6 +30,9 @@ vi.mock('@/lib/usage', () => ({
   logAnalysisEvent: mockLogAnalysisEvent,
 }))
 
+// usage funcs are mocked above, so the service client is never actually used here.
+vi.mock('@/lib/supabase/service', () => ({ createServiceClient: vi.fn(() => ({})) }))
+
 vi.mock('@/lib/anthropic', () => ({
   anthropic: {
     messages: {

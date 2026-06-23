@@ -1,5 +1,8 @@
 # PRD v2.0 — StoryForge: The BRD Quality Gate
 
+> ⚠️ **SUPERSEDED (historical).** Pricing and scope here are out of date.
+> Current source of truth: [[Roadmap-2026-06-19-Review-Board|Roadmap v1.2]] + [[Build-Spec-v1.0|Build Spec v1.0]] (and [[Requirements-Full-v3.0]]).
+
 **Version:** 2.0
 **Date:** 2026-05-13
 **Owner:** Adi

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { isUsageEnforcementEnabled } from '@/lib/flags'
 import { checkUsage, incrementUsage, logAnalysisEvent } from '@/lib/usage'
 import { sseEvent, createSSEStream } from '@/lib/sse'
 import { getModelConfig } from '@/lib/model-selector'
@@ -172,9 +174,15 @@ export async function POST(request: NextRequest) {
   // Generate a session ID for event logging
   sessionId = crypto.randomUUID()
 
-  // Check usage limit before proceeding
-  const usageResult = await checkUsage(supabase, user.id)
-  if (!usageResult.allowed) {
+  // Quota/measurement writes go through the SERVICE-ROLE client (steady-state RLS
+  // is SELECT-own only for users on usage_counters/analysis_events). This route
+  // is legacy/dead in the UI but is metered here so it can never be an unmetered
+  // bypass; full deletion is Phase 4.
+  const svc = createServiceClient()
+
+  // Check usage limit before proceeding (enforcement gated by the kill-switch)
+  const usageResult = await checkUsage(svc, user.id)
+  if (isUsageEnforcementEnabled() && !usageResult.allowed) {
     const headers = new Headers()
     headers.set('X-Limit-Reached', 'true')
     return jsonResponse(
@@ -231,11 +239,19 @@ export async function POST(request: NextRequest) {
     // If plan === 'free' or project not found: projectContext stays undefined
   }
 
-  // Log analysis_started and record start time for authenticated users
+  // Record start time and log analysis_started for authenticated users. The
+  // analytics write is BEST-EFFORT and must not break the request: during the
+  // flag-OFF compatibility deploy the analysis_events table may not exist yet
+  // (PGRST205, which logAnalysisEvent now throws), and that must not stop a
+  // successful analysis. startTime is set independently of the log.
   if (user && supabase && sessionId !== undefined) {
     wordCount = validation.text.split(/\s+/).length
-    await logAnalysisEvent(supabase, user.id, sessionId, 'analysis_started', wordCount)
     startTime = Date.now()
+    try {
+      await logAnalysisEvent(svc, user.id, sessionId, 'analysis_started', wordCount)
+    } catch (e) {
+      console.error('[api/analyze] log analysis_started failed (best-effort):', e)
+    }
   }
 
   // Determine AI model based on user's plan
@@ -331,9 +347,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (user && supabase && sessionId !== undefined) {
-          incrementUsage(supabase, user.id).catch(e => console.error('[api/analyze] incrementUsage failed:', e))
+          incrementUsage(svc, user.id).catch(e => console.error('[api/analyze] incrementUsage failed:', e))
           logAnalysisEvent(
-            supabase,
+            svc,
             user.id,
             sessionId,
             'analysis_completed',
@@ -407,9 +423,9 @@ export async function POST(request: NextRequest) {
 
       // Increment usage and log completion — fire-and-forget so failures don't kill the done event
       if (user && supabase && sessionId !== undefined) {
-        incrementUsage(supabase, user.id).catch(e => console.error('[api/analyze] incrementUsage failed:', e))
+        incrementUsage(svc, user.id).catch(e => console.error('[api/analyze] incrementUsage failed:', e))
         logAnalysisEvent(
-          supabase,
+          svc,
           user.id,
           sessionId,
           'analysis_completed',

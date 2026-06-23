@@ -16,6 +16,17 @@ export function WorkspaceShell({ plan = 'free' }: { plan?: 'free' | 'pro' }) {
           {ws.error && (
             <div className="flex-shrink-0 bg-red-50 px-6 py-2 text-sm text-red-700">{ws.error}</div>
           )}
+          {ws.limitReached && (
+            <div
+              role="alert"
+              data-testid="limit-reached"
+              className="flex-shrink-0 border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900"
+            >
+              {ws.limitReached.plan === 'pro'
+                ? `Kamu sudah mencapai batas ${ws.limitReached.limit} analisis bulan ini.`
+                : `Jatah analisis gratis bulan ini sudah habis (${ws.limitReached.count}/${ws.limitReached.limit}). Kamu masih bisa melanjutkan sesi yang sudah ada.`}
+            </div>
+          )}
           {hasSession
             ? <ChatPanel messages={ws.state!.messages} isSending={ws.isSending} lastResolved={ws.lastResolved} onSend={ws.sendMessage} />
             : <EmptyState onSend={ws.sendMessage} isSending={ws.isSending} />}
