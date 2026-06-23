@@ -42,6 +42,11 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// The usage read goes through the service-role client; point it at the same `from` mock.
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: vi.fn(() => ({ from: mockFrom })),
+}))
+
 describe('/api/usage route', () => {
   beforeEach(() => {
     vi.clearAllMocks()

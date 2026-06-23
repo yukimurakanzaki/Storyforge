@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getUsageForUser } from '@/lib/usage'
 
 export const runtime = 'nodejs'
@@ -17,7 +18,10 @@ export async function GET(): Promise<NextResponse> {
   }
 
   try {
-    const { count, limit, plan } = await getUsageForUser(supabase, user.id)
+    // Read counters via the service-role client (users have SELECT-own only; the
+    // rolling-window reset inside checkUsage needs to write).
+    const svc = createServiceClient()
+    const { count, limit, plan } = await getUsageForUser(svc, user.id)
 
     return NextResponse.json(
       { used: count, limit, plan },

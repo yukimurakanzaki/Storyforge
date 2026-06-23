@@ -15,6 +15,7 @@ import { NextRequest } from 'next/server'
 const mockInsert = vi.fn().mockResolvedValue({ error: null })
 const mockUpdateEq = vi.fn().mockResolvedValue({ error: null })
 const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq })
+const mockServiceClient = vi.fn()
 
 let mockUsageCount = 0
 let mockPlan: 'free' | 'pro' = 'free'
@@ -22,7 +23,7 @@ let mockUsageRowExists = true
 let mockAuthUser: { id: string } | null = { id: 'test-user-id' }
 
 function buildSupabaseMock() {
-  return {
+  const __svcClient = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: { user: mockAuthUser },
@@ -66,12 +67,19 @@ function buildSupabaseMock() {
       }
     }),
   }
+
+  mockServiceClient.mockReturnValue(__svcClient)
+  return __svcClient
 }
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: mockServiceClient,
 }))
 
 // Default Anthropic mock — stream that emits a valid JSON result

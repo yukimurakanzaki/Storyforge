@@ -7,11 +7,18 @@ import type { WorkspaceState } from '@/types/workspace'
 
 export type ArtifactTab = 'gaps' | 'prd'
 
+export interface LimitInfo {
+  count: number
+  limit: number
+  plan: 'free' | 'pro'
+}
+
 export interface UseWorkspace {
   sessionId: string
   state: WorkspaceState | null
   isSending: boolean
   error: string | null
+  limitReached: LimitInfo | null
   activeTab: ArtifactTab
   lastResolved: string[]
   setActiveTab: (t: ArtifactTab) => void
@@ -28,6 +35,7 @@ export function useWorkspace(projectId: string | null = null): UseWorkspace {
   const [state, setState] = useState<WorkspaceState | null>(null)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [limitReached, setLimitReached] = useState<LimitInfo | null>(null)
   const [activeTab, setActiveTab] = useState<ArtifactTab>('gaps')
   const [lastResolved, setLastResolved] = useState<string[]>([])
   const stateRef = useRef<WorkspaceState | null>(null)
@@ -35,7 +43,7 @@ export function useWorkspace(projectId: string | null = null): UseWorkspace {
 
   const post = useCallback(async (message: string) => {
     if (isSending) return
-    setError(null); setIsSending(true)
+    setError(null); setLimitReached(null); setIsSending(true)
     const before = stateRef.current
     setState(withOptimisticUserMessage(before, sessionId, message))
     try {
@@ -43,7 +51,15 @@ export function useWorkspace(projectId: string | null = null): UseWorkspace {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, message, projectId }),
       })
-      if (!res.ok) { setError('Gagal memproses. Coba lagi.'); setState(before); return }
+      if (!res.ok) {
+        if (res.status === 429) {
+          const info = (await res.json().catch(() => null)) as Partial<LimitInfo> | null
+          setLimitReached({ count: info?.count ?? 0, limit: info?.limit ?? 0, plan: info?.plan ?? 'free' })
+          setState(before)
+          return
+        }
+        setError('Gagal memproses. Coba lagi.'); setState(before); return
+      }
       for await (const event of readSSEStream(res)) {
         if (event.name === 'done') {
           const data = event.data as { state: WorkspaceState; resolvedGapIds: string[]; intent: string }
@@ -79,7 +95,7 @@ export function useWorkspace(projectId: string | null = null): UseWorkspace {
   const dismissGap = useCallback((gapId: string) => patchGap({ gapId, outOfScope: true }), [patchGap])
 
   const startNewSession = useCallback(() => {
-    setSessionId(crypto.randomUUID()); setState(null); setError(null); setLastResolved([]); setActiveTab('gaps')
+    setSessionId(crypto.randomUUID()); setState(null); setError(null); setLimitReached(null); setLastResolved([]); setActiveTab('gaps')
   }, [])
 
   const loadSession = useCallback(async (id: string) => {
@@ -92,7 +108,7 @@ export function useWorkspace(projectId: string | null = null): UseWorkspace {
     } catch { setError('Gagal memuat sesi.') }
   }, [])
 
-  return { sessionId, state: state ?? (null), isSending, error, activeTab, lastResolved,
+  return { sessionId, state: state ?? (null), isSending, error, limitReached, activeTab, lastResolved,
     setActiveTab, sendMessage, generatePrd, answerGap, dismissGap, startNewSession, loadSession }
 }
 

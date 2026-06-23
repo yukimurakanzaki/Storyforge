@@ -27,9 +27,10 @@ const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq })
 
 // Track which tables were queried via from()
 const fromCallLog: string[] = []
+const mockServiceClient = vi.fn()
 
 function buildSupabaseMock(plan: 'free' | 'pro' = 'free') {
-  return {
+  const __svcClient = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: { user: { id: 'free-user-id', email: 'free@example.com' } },
@@ -84,12 +85,19 @@ function buildSupabaseMock(plan: 'free' | 'pro' = 'free') {
       }
     }),
   }
+
+  mockServiceClient.mockReturnValue(__svcClient)
+  return __svcClient
 }
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: mockServiceClient,
 }))
 
 const VALID_JSON_TEXT = JSON.stringify({
@@ -307,6 +315,9 @@ describe('Bug Condition Exploration — Pro Gate: Company Context (Free User Con
       },
       from: localFromSpy,
     } as never)
+    // checkUsage now reads via the service client — share the same `from` spy so its
+    // subscriptions read is counted alongside the project-gate read.
+    mockServiceClient.mockReturnValue({ from: localFromSpy } as never)
 
     const POST = await getPostHandler()
     const req = makeAuthenticatedRequest({ text: 'valid BRD text', projectId: 'some-uuid' })

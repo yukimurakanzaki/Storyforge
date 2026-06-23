@@ -4,6 +4,7 @@ import type { ModelTurnResponse } from '@/types/workspace'
 
 const mockCreate = vi.fn()
 const mockCreateClient = vi.fn()
+const mockCreateServiceClient = vi.fn()
 
 vi.mock('@/lib/anthropic', () => ({
   anthropic: {
@@ -15,6 +16,10 @@ vi.mock('@/lib/anthropic', () => ({
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: mockCreateClient,
+}))
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: mockCreateServiceClient,
 }))
 
 vi.mock('@/lib/analysis/context-loader', () => ({
@@ -103,6 +108,7 @@ function buildSupabase(options: {
     __mocks: { insert, update, updateEq },
   }
 
+  mockCreateServiceClient.mockReturnValue(supabase)
   return supabase
 }
 

@@ -31,6 +31,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# P0 ops artifacts — prod pre-state snapshots contain PII, never commit
+/storyforge-ops/
+supabase/migrations/_rollback/*pre_state*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -210,6 +210,11 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// Server-authoritative usage/event writes use the service client; share `mockFrom`.
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: vi.fn(() => ({ from: mockFrom })),
+}))
+
 // Helper to create NextRequest
 function createRequest(
   url: string,
