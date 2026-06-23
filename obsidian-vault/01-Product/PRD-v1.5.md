@@ -1,5 +1,8 @@
 # PRD v1.5 — StoryForge BRD Readiness Check
 
+> ⚠️ **SUPERSEDED (historical).** Pricing (Rp199k), dual-segment, and scope here are out of date.
+> Current source of truth: [[Roadmap-2026-06-19-Review-Board|Roadmap v1.2]] + [[Build-Spec-v1.0|Build Spec v1.0]] (and [[Requirements-Full-v3.0]]).
+
 **Version:** 1.5
 **Date:** 2026-03-29
 **Owner:** Adi

@@ -1,14 +1,16 @@
 # 📋 StoryForge Project Index
 
-**Last Updated:** 2026-06-12 (WIB)
-**Status:** Pre-MVP - Living BRD Workspace **LIVE on `main` + deployed to Vercel**. Production Google OAuth is blocked pending Supabase URL Configuration correction and retest. Next: fix OAuth allow list → register `storyforge.id` → build manual payment flow Phase A.
+**Last Updated:** 2026-06-24 (WIB)
+**Status:** Pre-MVP — **P0 BUILD COMPLETE & triple-rehearsed (local Supabase stack).** All review findings closed: migrations (prod-gap + clean-replay), deterministic grants + TRUNCATE/DELETE lockdown, literal-`service_role` RLS matrix, fail-closed enforcement + write-error propagation, compat-deploy `PGRST205` safety, `next@16.2.9`/`ws@8.21.0`, real-API gauntlet **8/8** (49/50/51 + AI-suppression + Free smoke + oversized→150k), and the loopback-guarded harness. Gates: unit 355/8-skip · tsc/lint/build 0 · E2E 3/3 · prod audit 0 high/3 mod. **No production touch authorized — awaiting `APPROVE P0 PROD`.** See [[03-Sessions/2026-06-23-P0-Build-Complete-Local-Rehearsal]].
 
 ---
 
 ## 🚀 Quick Navigation
 
 ### Product
-- [[01-Product/PRD-v3.0-Launch-Readiness-Audit|Launch Readiness Audit]] — **NEW** evidence-based audit (58/100); flags workspace enforcement/metrics gap
+- [[01-Product/Roadmap-2026-06-19-Review-Board|Review Board Roadmap (v1.2)]] — **EXECUTION SOURCE** — 7-persona review → phased plan (P0…P4), beta gates, metric stack, locked decisions
+- [[01-Product/Build-Spec-v1.0|Build Spec v1.0]] — **DELIVERY SPEC** — journeys, screen states, Bahasa copy bank, quota rules, DB/API contracts, payment state machine, eval fixtures, DoD
+- [[01-Product/PRD-v3.0-Launch-Readiness-Audit|Launch Readiness Audit]] — evidence-based audit (58/100); flags workspace enforcement/metrics gap
 - [[01-Product/Requirements-Full-v3.0|Full Requirements v3.0]] — **LATEST** consolidated PRD (2026-06-10)
 - [[01-Product/PRD-v1.5|PRD v1.5]] — Complete spec, production-ready
 - [[01-Product/North-Star-Metric|North Star Metric]] — WAA = Weekly Active Analyzers
@@ -22,6 +24,10 @@
 - [[02-Tech/Decisions|Tech Decisions]] — Trade-offs documented
 
 ### Sessions & Progress
+- [[03-Sessions/2026-06-23-P0-Build-Complete-Local-Rehearsal|2026-06-23: P0 BUILD Complete + Local Rehearsal]] — **LATEST** — P0 BUILD closed; all review findings fixed; triple-rehearsed on a local stack; production awaits `APPROVE P0 PROD`
+- [[03-Sessions/2026-06-23-P0-Local-Rehearsal-Review|2026-06-23: P0 Local Rehearsal Review]] — migration path works; profile grants, genuine service-role tests, and real API gauntlet still block BUILD completion
+- [[03-Sessions/2026-06-22-P0-Build-Gate-Review|2026-06-22: P0 Build Gate Review]] — **LATEST** — local gates green; paid branch blocked on error handling, silent writes, and production dependency audit
+- [[03-Sessions/2026-06-21-Claude-P0-Preflight-Review|2026-06-21: Claude P0 Preflight Review]] — **LATEST** — revise before approval; security/QA/product/UI findings
 - [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] — **LATEST**
 - [[03-Sessions/2026-06-12-Production-Google-OAuth-Debug|2026-06-12: Production Google OAuth Debug]]
 - [[03-Sessions/2026-06-12-Merge-and-Deploy|2026-06-12: Merge + Deploy to Vercel]] — **LATEST**
@@ -78,7 +84,79 @@
 
 ---
 
-## Latest Status - 2026-06-10
+## Latest Status — 2026-06-23
+
+### Local Supabase rehearsal reviewed — P0 BUILD still open
+
+- **Passed:** prod-gap migration, backfill + trigger parity, schema/RLS checks, and 351/351 unit tests.
+- **Corrected:** profile TRUNCATE/DELETE privilege hole, service-role profile access, and literal service-role matrix execution.
+- **Verified:** real local `/api/workspace` gauntlet passes 7/7 across Free and Pro boundaries with AI suppression on rejects.
+- **Final DoD gaps:** refuse non-loopback gauntlet URLs before client creation; add the missing oversized-input real-local smoke; rerun full gates including build/E2E.
+- **Boundary:** remain on Supabase Free; no production action before final BUILD evidence and separate `APPROVE P0 PROD` with manual backup.
+
+See [[03-Sessions/2026-06-23-P0-Local-Rehearsal-Review]].
+
+---
+
+## Previous Status — 2026-06-22
+
+### P0 local build reviewed — paid branch not approved yet
+
+- **Verified green:** 341/341 unit tests, TypeScript, lint, Next 16.2.9 build, and 3/3 Playwright tests.
+- **Corrected:** subscription taxonomy, Supabase write propagation, RLS rollback safety, production `ws`, and the legacy `/api/analyze` pre-migration analytics failure path.
+- **Verified green:** 351/351 unit tests, TypeScript, lint, Next 16.2.9 build, 3/3 Playwright, and production audit at 0 High / 3 Moderate. The final compatibility regression also passed a deliberate red/green check.
+- **Cost decision:** remain on Supabase Free; the paid branch authorization is superseded and no paid branch should be created.
+- **Replacement gate:** run the full migration/RLS/Pro/Free gauntlet against a local Supabase CLI + Docker production-like fixture.
+- **Boundary:** no production DB, deploy, environment, auth-user, or flag change; `APPROVE P0 PROD` remains separately gated and requires a verified manual backup on Free.
+
+See [[03-Sessions/2026-06-22-P0-Build-Gate-Review]].
+
+---
+
+## Previous Status — 2026-06-21
+
+### Claude P0 preflight reviewed — revise before approval
+
+- **Live state reconfirmed:** 3 enforcement/analytics tables still missing; 2 auth users, 0 profiles, 4 analysis results.
+- **Security blockers:** users can mutate their own quota counters and profile role under the proposed/current policies; analytics inserts are forgeable.
+- **QA:** 321/321 unit tests, types, lint, and build pass; Playwright is red (4 failed, 1 passed, 1 skipped).
+- **Product/UX:** living-workspace 429 becomes a generic error; mobile hides gaps/score/PRD; P0 smoke cannot pass as written.
+- **Decision:** do not reply `APPROVE P0` until the revised checklist in [[03-Sessions/2026-06-21-Claude-P0-Preflight-Review]] is satisfied.
+
+---
+
+## Previous Status — 2026-06-19
+
+### Review board → Roadmap v1.2 + Build Spec v1.0 (planning only; no code changed)
+
+- **🔴 Headline (verified vs live Supabase):** prod is missing `subscriptions`, `usage_counters`, `analysis_events` → PR #17 enforcement + Pro detection + **WAA are silently inert in production.** Real launch readiness **~50/100** (not 58). Fix = apply P0-02 migrations. The "deployed + verified 2026-06-19" claim was tests/tsc/lint only, never a prod data check.
+- **Artifacts:** [[Roadmap-2026-06-19-Review-Board|Roadmap v1.2]] (execution source) + [[Build-Spec-v1.0|Build Spec v1.0]] (delivery spec) + [[Beta-Users|private beta CRM]] (Dilya, Radhy, Ben, Handa, Savira).
+- **Locked:** PMs-only · store+honest-FAQ · Rp149k · Pro 50/mo hard · light theme · **OpenRouter pivot for MVP** (Anthropic fallback; overrides CLAUDE.md Anthropic-only + OQ-2).
+- **NEXT (the one move that lifts readiness):** **apply P0-02** — back up → create the 3 tables (with `metadata jsonb` + `usage_counters` INSERT policy) + auto-profile trigger + backfill 2 users → verify → smoke. Owner-parallel: set OpenRouter key; answer decisions R5–R8.
+- See [[03-Sessions/2026-06-19-Review-Board-Roadmap-BuildSpec|session log]].
+
+---
+
+## Previous Status — 2026-06-14
+
+### PR #17 pushed — workspace tier enforcement
+
+Branch `fix/workspace-tier-enforcement` → [PR #17](https://github.com/yukimurakanzaki/Storyforge/pull/17):
+
+- `/api/workspace` now enforces free-tier quota (429 + `X-Limit-Reached` on new session at cap)
+- WAA restored: `logAnalysisEvent` `analysis_started` + `analysis_completed` on every turn
+- Quota increment on new session success only (continuing an existing session = free + unlimited)
+- `FREE_WATERMARK` (OQ-6 copy) rendered in PRD artifact + appended to copied text for free users
+- AI timeout: `withTimeout` wraps both model calls — hung upstream can't hold SSE open
+- Suite 321/0, `tsc` clean, build green
+
+**Pending before merge:** manual logged-in smoke: free limit → 429; free PRD → watermark; pro PRD → clean.
+
+**Next build:** P0-10 manual payment flow (`design.md` ready). See [[03-Sessions/2026-06-14-Launch-Readiness-Audit]].
+
+---
+
+## Previous Status - 2026-06-10
 
 ### Completed This Session - Manual Payment Flow Trade-off Analysis
 
@@ -186,53 +264,35 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 ### In Progress 🔄
 
-- 🔄 **Run Supabase migrations** — `005_output_trust_layer.sql` + `008_profile_roles.sql`
-- 🔄 **Register domain storyforge.id** — Next action
-- 🔄 **Setup email forwarding** — privacy@storyforge.id, hello@storyforge.id (via Cloudflare)
-- 🔄 **Message William** — Share beta link, reactivate commitment
-- 🔄 **Compliance pages** — Publish /privacy, /terms on domain
+- 🔄 **Apply P0 to prod** — migration 012 + enforcement flip; awaiting `APPROVE P0 PROD`
+- 🔄 **Beta CRM** — Dilya, Radhy, Ben, Handa, Savira (see [[04-Launch/Beta-Users|Beta Users]])
 
-### Blocked ⬜
+### Blocked ⬜ (waiting on P0 going live)
 
-- ⬜ **William onboarded** — Waiting for domain + compliance pages
-- ⬜ **Beta subdomain setup** — Waiting for domain (beta.storyforge.id)
-- ⬜ **Supabase schema migration** — Ready, waiting for domain + email setup
-- ⬜ **Soft launch Week 8** — On track if domain done this week
-- ⬜ **Server-side guest rate limiting** — Recommended next hardening step
+- ⬜ **Tier enforcement + WAA active in prod** — needs migration 012 applied
+- ⬜ **P0-04 OAuth allow-list** — Supabase dashboard (PROD-phase owner step)
+- ⬜ **P0-06 logged-in prod smoke** — after enforcement flips on
+- ⬜ **P0-10 manual payment flow** — `design.md` ready, build after P0 stable
+- ⬜ **Beta onboarding** — after enforcement live so quotas actually hold
 
 ---
 
-## 🎯 Immediate Next Steps (This Week)
+## 🎯 Immediate Next Steps
 
-### Day 1 (Today — Friday)
-- [ ] Register **storyforge.id** (Niagahoster, Rumahweb, or Namecheap)
-  - Budget: Rp 200–300k/year
-  - Duration: 5–10 minutes
-- [ ] Confirm registration & nameserver pointing to Vercel
+### The one move that makes launch real — apply P0 to production
+P0 enforcement is built + triple-rehearsed locally but **inert in prod** until migration 012
+lands. Owner sign-off required: reply **`APPROVE P0 PROD`**. Sequence (from the 2026-06-23 log):
+1. Capture prod pre-state snapshot **outside Git** (`C:\Users\USER\storyforge-ops\`).
+2. Owner: confirm Supabase backup; deploy new code with `USAGE_ENFORCEMENT_ENABLED=false`.
+3. Apply `012_core_saas_enforcement.sql` to prod; run schema/RLS/write-matrix verification.
+4. Owner: flip `USAGE_ENFORCEMENT_ENABLED=true`; live smoke (Pro 49/50/51 + free, temp user).
+5. Monitor; kill-switch (`=false`) on any failure.
 
-### Day 2–3 (Weekend)
-- [ ] Setup **email forwarding** via Cloudflare
-  - `privacy@storyforge.id` → personal email
-  - `hello@storyforge.id` → personal email
-- [ ] Publish `/privacy` page on Vercel
-  - Copy from Compliance-Package-v1.0.docx
-  - Point domain to this page
-- [ ] Publish `/terms` page on Vercel
-
-### Day 4–5 (Monday–Tuesday)
-- [ ] Point custom domain to Vercel
-  - Add domain to Vercel project
-  - Wait for SSL cert (auto, ~1 min)
-- [ ] Message **William**
-  - Share beta link: `https://storyforge.id` or `https://app.storyforge.id`
-  - Reactivate commitment: "Ready untuk trial next week?"
-  - Expected: confirmation + first analysis
-
-### Day 6–7 (Wednesday–Thursday)
-- [ ] Backup plan if William unresponsive:
-  - Use sample BRD to test full flow
-  - Document everything as portfolio artifact
-  - Prepare for pitch deck with "live demo"
+### After P0 is live
+- [ ] **P0-04** — Google OAuth allow-list in Supabase dashboard (owner/manual)
+- [ ] **P0-06** — logged-in smoke vs prod (free limit → 429; free PRD → watermark; pro PRD → clean)
+- [ ] **P0-10** — build manual payment flow (`design.md` ready)
+- [ ] OpenRouter provider pivot (decided 2026-06-19; not yet built — code still 100% Anthropic)
 
 ---
 
@@ -240,13 +300,15 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 | Component | Status | Notes |
 |---|---|---|
-| **Frontend** | ✅ Live | Next.js on Vercel, guest `/analyze` flow working |
-| **API Route** | ✅ Live | `/api/analyze` with Anthropic claude-haiku-4-5, validation, no-store |
-| **ZDR Header** | ✅ Configured | Privacy-preserving, no data retention |
-| **Supabase** | ⏳ Pending | Schema ready, waiting for go-live signal |
-| **Domain** | ⏳ Pending | storyforge.id available, need registration |
-| **Email** | ⏳ Pending | Forwarding via Cloudflare, ready to setup |
-| **Payment** | ⏳ Phase 2 | Manual bank transfer for beta, Xendit after |
+| **Frontend** | ✅ Live | Next.js 16 on Vercel, light theme, Living BRD Workspace |
+| **API Route** | ✅ Live | `/api/analyze` + `/api/workspace`, Anthropic claude-haiku-4-5, streaming |
+| **Auth** | ✅ Live | Email/password + Google OAuth, guest mode |
+| **ZDR** | ✅ Gated | Behind `ANTHROPIC_ZDR_ENABLED`; Pro tier sends ZDR header |
+| **Domain** | ✅ Live | storyforge.id registered + pointed to Vercel |
+| **Supabase (core)** | ✅ Live | Profiles, history, workspace, user-context tables in prod |
+| **Supabase (enforcement)** | ⛔ Not in prod | `subscriptions`/`usage_counters`/`analysis_events` — migration 012 pending `APPROVE P0 PROD` |
+| **Tier enforcement + WAA** | 🟡 Built, inert in prod | Live once 012 applied + `USAGE_ENFORCEMENT_ENABLED=true` |
+| **Payment** | ⏳ Phase 2 | Manual bank transfer (P0-10, design ready), Xendit after |
 
 ---
 
@@ -281,14 +343,14 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 | # | Task | Priority | Status |
 |---|---|---|---|
-| 1 | Register storyforge.id | 🔴 BLOCKER | ⬜ Today |
-| 2 | Setup email forwarding | 🔴 BLOCKER | ⏳ Depends on #1 |
-| 3 | Publish /privacy page | 🔴 BLOCKER | ⏳ Depends on #1 |
-| 4 | Publish /terms page | 🔴 BLOCKER | ⏳ Depends on #1 |
-| 5 | Point custom domain to Vercel | 🟠 Critical | ⏳ Depends on #1 |
-| 6 | Test William onboarding | 🟠 Critical | ⏳ Depends on #5 |
-| 7 | Supabase schema migration | 🟠 Important | ⏳ Ready, trigger after #6 |
-| 8 | Xendit integration | 🟡 Nice-to-have | ⏳ Phase 2 |
+| 1 | Register storyforge.id + point to Vercel | 🔴 BLOCKER | ✅ Done |
+| 2 | Compliance pages (/privacy, /terms) | 🔴 BLOCKER | ✅ Done |
+| 3 | Apply migration 012 to prod (`APPROVE P0 PROD`) | 🔴 BLOCKER | ⬜ Awaiting owner |
+| 4 | Flip `USAGE_ENFORCEMENT_ENABLED=true` + live smoke | 🔴 BLOCKER | ⏳ Depends on #3 |
+| 5 | P0-04 Google OAuth allow-list | 🟠 Critical | ⏳ PROD phase |
+| 6 | Beta onboarding (Dilya, Radhy, Ben, Handa, Savira) | 🟠 Critical | ⏳ Depends on #4 |
+| 7 | P0-10 manual payment flow | 🟠 Important | ⏳ Build after P0 stable |
+| 8 | OpenRouter pivot / Xendit | 🟡 Nice-to-have | ⏳ Phase 2 |
 
 ---
 
@@ -323,8 +385,6 @@ See [[03-Sessions/2026-06-05-Living-BRD-Workspace-Phase1-Build|full session log]
 
 ---
 
-**Session Log:** [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] - **LATEST**
-
-**Current Session Log:** [[03-Sessions/2026-06-14-Launch-Readiness-Audit|2026-06-14: Launch Readiness Audit (PRD v3.0)]] - **LATEST**
+**Latest Session Log:** [[03-Sessions/2026-06-23-P0-Build-Complete-Local-Rehearsal|2026-06-23: P0 BUILD Complete + Local Rehearsal]]
 
 **Auto-updated by Claude**

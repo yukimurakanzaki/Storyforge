@@ -1,4 +1,7 @@
 # PRD v1.5 → v2.0 Reconciliation
+
+> ⚠️ **SUPERSEDED (historical).** This reconciles two older PRDs.
+> Current source of truth: [[Roadmap-2026-06-19-Review-Board|Roadmap v1.2]] + [[Build-Spec-v1.0|Build Spec v1.0]] (and [[Requirements-Full-v3.0]]).
 **Date:** 2026-05-12
 **Status:** Draft — for brainstorming
 
